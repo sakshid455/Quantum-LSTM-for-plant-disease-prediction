@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model Weights
+checkpoints/
+weights/
+*.pt
+*.pth
+*.ckpt
+
+# Dataset / Large Data
+data/
+
+# Generated Results
+outputs/
+plots/
+
+# Logs
+logs/
+
+# VS Code
+.vscode/
+
+# Cached Features
+cache/
+
+# Streamlit Cache
+.streamlit/
+
+# Temporary Files
+*.tmp
+
+# Old Git History
+.git_backup/
+
+# Environment Variables
+.env
