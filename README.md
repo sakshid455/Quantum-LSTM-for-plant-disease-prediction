@@ -1,97 +1,63 @@
-This readme file was generated on 2025-12-8 by Jonas Anderegg
+# Quantum-Enhanced Multimodal Temporal Plant Disease Progression Prediction
 
+A multimodal temporal deep-learning project for predicting plant disease progression from sequential wheat leaf observations using classical recurrent neural networks and a Quantum Long Short-Term Memory (QLSTM) model.
 
+---
 
-GENERAL INFORMATION
+## 1. Project Overview
 
-High-Resolution Leaf Image Sequences with Geometric Alignment for Dynamic Trait Extraction
+Plant diseases develop over time rather than appearing as independent events in individual images. Therefore, predicting disease progression requires understanding:
 
-Author Information
-Name: Jonas Anderegg
-ORCID: https://orcid.org/0000-0002-3345-4696
-Institution: ETH Zurich
-Email: jonas.anderegg@usys.ethz.ch; jonas.anderegg@agroscope.admin.ch
+- Visual characteristics of plant leaves
+- Disease severity
+- Lesion development
+- Environmental/metadata information
+- Temporal relationships between observations
 
-Date of data collection: 2023-05-025:2024-06-28 
+This project investigates whether a Quantum-enhanced recurrent architecture, specifically a Quantum Long Short-Term Memory (QLSTM), can improve temporal disease progression prediction compared with classical recurrent models such as LSTM and GRU.
 
-Geographic location of data collection: Switzerland
+The project uses sequential wheat leaf observations derived from the ETH Zurich Sequential Wheat Dataset.
 
-Information about funding sources that supported the collection of the data: Funding was provided by ETH Zurich
+The central research question is:
 
-SHARING/ACCESS INFORMATION
+> Can a hybrid QLSTM improve temporal plant disease progression prediction over classical recurrent models when using sequential wheat leaf images and environmental metadata?
 
-Licenses/restrictions placed on the data:https://creativecommons.org/licenses/by/4.0/
+---
 
-Links to publications that cite or use the data: 
+## 2. Main Objective
 
-Links to other publicly accessible locations of the data: 
+The main objective is to develop a multimodal temporal prediction pipeline:
 
-Links/relationships to ancillary data sets:
-
-Was data derived from another source?
-If yes, list source(s): No
-
-Recommended citation for this dataset: See publication (will follow)
-
-
-DATA & FILE OVERVIEW
-
-File List: meta, models, processed raw
-
-Relationship between files, if important: See publication
-
-Additional related data collected that was not included in the current data package: No
-
-Are there multiple versions of the dataset?
-If yes, name of file(s) that was updated: No
-
-
-
-METHODOLOGICAL INFORMATION
-
-Description of methods used for collection/generation of data: See publication
-
-Methods for processing the data: https://github.com/and-jonas/sympathique-wheat
-
-Instrument- or software-specific information needed to interpret the data: https://github.com/and-jonas/sympathique-wheat
-
-Standards and calibration information, if appropriate: 
-
-Environmental/experimental conditions:  
-
-Describe any quality-assurance procedures performed on the data: See publication
-
-People involved with sample collection, processing, analysis and/or submission: Jonas Anderegg and various student helpers (see publication)
-
-DATA-SPECIFIC INFORMATION FOR: [Meta]
-
-
-Variable List: contains information about field management, experimental design, phenology, environmental data, marker-detection tratining data
-
-Structure:
-
-
-
-DATA-SPECIFIC INFORMATION FOR: [models]
-
-
-Variable List: contains the trained reference mark detection model
-
-
-
-DATA-SPECIFIC INFORMATION FOR: [processed]
-
-
-Variable List: reg, res, ts
-contains the registration outputs, time series analysis outputs, and resulting data sets
-
-Structure: processed/<sample_UID>
-
-
-
-
-DATA-SPECIFIC INFORMATION FOR: [raw]
-
-
-Variable List: contains raw JPG images
-Structure: raw/<Year>/<Date>
+RAW / PROCESSED WHEAT DATA
+        |
+        v
+Image / Feature Preprocessing
+        |
+        v
+Vision / Metadata Feature Extraction
+        |
+        v
+Temporal Sequence Construction
+        |
+        v
+Multimodal Feature Fusion
+        |
+        v
++-----------------------------+
+| Temporal Recurrent Models   |
+|                             |
+|  Classical LSTM             |
+|  Classical GRU              |
+|  Quantum LSTM (QLSTM)       |
++-----------------------------+
+        |
+        v
+Multi-Task Prediction
+        |
+        +--------------------+
+        |                    |
+        v                    v
+Disease Severity       Lesion Area
+        |
+        v
+Evaluation + Visualization
