@@ -13,14 +13,16 @@ env/
 .ipynb_checkpoints/
 
 # Model Weights
-checkpoints/
+
 weights/
 *.pt
 *.pth
 *.ckpt
 
 # Dataset / Large Data
-data/
+data/meta/
+data/processed/
+data/raw/
 
 
 
@@ -31,7 +33,7 @@ logs/
 .vscode/
 
 # Cached Features
-cache/
+data/cache/
 
 # Streamlit Cache
 .streamlit/
