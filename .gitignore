@@ -22,9 +22,7 @@ weights/
 # Dataset / Large Data
 data/
 
-# Generated Results
-outputs/
-plots/
+
 
 # Logs
 logs/

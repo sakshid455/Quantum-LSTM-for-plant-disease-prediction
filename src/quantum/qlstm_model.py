@@ -8,7 +8,7 @@ class QLSTMModel(nn.Module):
 
     def __init__(
         self,
-        input_size=768,
+        input_size=791,
         hidden_size=32
     ):
         super().__init__()
@@ -22,6 +22,12 @@ class QLSTMModel(nn.Module):
 
         # Disease progression prediction
         self.disease_head = nn.Linear(
+            hidden_size,
+            1
+        )
+
+        # Lesion area prediction
+        self.lesion_head = nn.Linear(
             hidden_size,
             1
         )
@@ -52,4 +58,6 @@ class QLSTMModel(nn.Module):
 
         disease_output = self.disease_head(h)
 
-        return disease_output
+        lesion_output = self.lesion_head(h)
+
+        return disease_output, lesion_output

@@ -32,11 +32,15 @@ HIDDEN_SIZE = 32
 NUM_LAYERS = 1
 
 MODEL_PATH = (
-    "checkpoints/best_gru_model.pth"
+    "checkpoints/best_multimodal_gru.pth"
 )
 
 OUTPUT_PATH = (
-    "outputs/gru_metrics.json"
+    "outputs/multimodal_gru_test_metrics.json"
+)
+
+PREDICTIONS_PATH = (
+    "outputs/multimodal_gru_predictions.csv"
 )
 
 
@@ -51,7 +55,7 @@ os.makedirs(
 
 
 print("=" * 60)
-print("GRU TEST EVALUATION")
+print("MULTIMODAL GRU TEST EVALUATION")
 print("=" * 60)
 
 print("Device:", DEVICE)
@@ -106,12 +110,19 @@ model.eval()
 
 
 # ============================================================
-# Test predictions
+# Prediction containers
 # ============================================================
 
-predictions = []
-targets = []
+disease_predictions = []
+disease_targets = []
 
+lesion_predictions = []
+lesion_targets = []
+
+
+# ============================================================
+# Test predictions
+# ============================================================
 
 with torch.no_grad():
 
@@ -119,28 +130,34 @@ with torch.no_grad():
 
         X = X.to(DEVICE)
 
-        output = model(X)
+        disease_output, lesion_output = model(X)
 
-        output = (
-            output
+        disease_predictions.extend(
+            disease_output
             .view(-1)
             .cpu()
             .numpy()
         )
 
-        target = (
+        disease_targets.extend(
             y_disease
             .view(-1)
             .cpu()
             .numpy()
         )
 
-        predictions.extend(
-            output
+        lesion_predictions.extend(
+            lesion_output
+            .view(-1)
+            .cpu()
+            .numpy()
         )
 
-        targets.extend(
-            target
+        lesion_targets.extend(
+            y_lesion
+            .view(-1)
+            .cpu()
+            .numpy()
         )
 
 
@@ -148,58 +165,124 @@ with torch.no_grad():
 # Convert to NumPy
 # ============================================================
 
-predictions = np.asarray(
-    predictions,
+disease_predictions = np.asarray(
+    disease_predictions,
     dtype=np.float32
 )
 
-targets = np.asarray(
-    targets,
+disease_targets = np.asarray(
+    disease_targets,
+    dtype=np.float32
+)
+
+lesion_predictions = np.asarray(
+    lesion_predictions,
+    dtype=np.float32
+)
+
+lesion_targets = np.asarray(
+    lesion_targets,
     dtype=np.float32
 )
 
 
 # ============================================================
-# Metrics
+# Reverse lesion normalization
 # ============================================================
 
-mse = mean_squared_error(
-    targets,
-    predictions
+lesion_predictions_original = (
+    lesion_predictions
+    * lesion_std
+    + lesion_mean
 )
 
-rmse = np.sqrt(
-    mse
-)
-
-mae = mean_absolute_error(
-    targets,
-    predictions
-)
-
-r2 = r2_score(
-    targets,
-    predictions
+lesion_targets_original = (
+    lesion_targets
+    * lesion_std
+    + lesion_mean
 )
 
 
 # ============================================================
-# Correlation
+# Disease metrics
+# ============================================================
+
+disease_mse = mean_squared_error(
+    disease_targets,
+    disease_predictions
+)
+
+disease_rmse = np.sqrt(
+    disease_mse
+)
+
+disease_mae = mean_absolute_error(
+    disease_targets,
+    disease_predictions
+)
+
+disease_r2 = r2_score(
+    disease_targets,
+    disease_predictions
+)
+
+
+# ============================================================
+# Lesion metrics
+# ============================================================
+
+lesion_mse = mean_squared_error(
+    lesion_targets_original,
+    lesion_predictions_original
+)
+
+lesion_rmse = np.sqrt(
+    lesion_mse
+)
+
+lesion_mae = mean_absolute_error(
+    lesion_targets_original,
+    lesion_predictions_original
+)
+
+lesion_r2 = r2_score(
+    lesion_targets_original,
+    lesion_predictions_original
+)
+
+
+# ============================================================
+# Correlations
 # ============================================================
 
 if (
-    np.std(targets) > 0
-    and np.std(predictions) > 0
+    np.std(disease_targets) > 0
+    and np.std(disease_predictions) > 0
 ):
 
-    correlation = np.corrcoef(
-        targets,
-        predictions
+    disease_correlation = np.corrcoef(
+        disease_targets,
+        disease_predictions
     )[0, 1]
 
 else:
 
-    correlation = float("nan")
+    disease_correlation = float("nan")
+
+
+if (
+    np.std(lesion_targets_original) > 0
+    and np.std(lesion_predictions_original) > 0
+):
+
+    lesion_correlation = np.corrcoef(
+        lesion_targets_original,
+        lesion_predictions_original
+    )[0, 1]
+
+else:
+
+    lesion_correlation = float("nan")
 
 
 # ============================================================
@@ -207,22 +290,41 @@ else:
 # ============================================================
 
 prediction_df = pd.DataFrame({
-    "Actual": targets,
-    "Predicted": predictions
+
+    "Disease_Actual": disease_targets,
+
+    "Disease_Predicted": disease_predictions,
+
+    "Disease_Error":
+        disease_predictions
+        - disease_targets,
+
+    "Disease_Absolute_Error":
+        np.abs(
+            disease_predictions
+            - disease_targets
+        ),
+
+    "Lesion_Actual":
+        lesion_targets_original,
+
+    "Lesion_Predicted":
+        lesion_predictions_original,
+
+    "Lesion_Error":
+        lesion_predictions_original
+        - lesion_targets_original,
+
+    "Lesion_Absolute_Error":
+        np.abs(
+            lesion_predictions_original
+            - lesion_targets_original
+        )
 })
 
-prediction_df["Error"] = (
-    prediction_df["Predicted"]
-    - prediction_df["Actual"]
-)
-
-prediction_df["Absolute_Error"] = (
-    prediction_df["Error"]
-    .abs()
-)
 
 prediction_df.to_csv(
-    "outputs/gru_predictions.csv",
+    PREDICTIONS_PATH,
     index=False
 )
 
@@ -233,17 +335,37 @@ prediction_df.to_csv(
 
 metrics = {
 
-    "MSE": float(mse),
+    "Disease Severity": {
 
-    "RMSE": float(rmse),
+        "MSE": float(disease_mse),
 
-    "MAE": float(mae),
+        "RMSE": float(disease_rmse),
 
-    "R2": float(r2),
+        "MAE": float(disease_mae),
 
-    "Correlation": float(correlation),
+        "R2": float(disease_r2),
 
-    "Samples": int(len(targets))
+        "Correlation":
+            float(disease_correlation)
+
+    },
+
+    "Lesion Area": {
+
+        "MSE": float(lesion_mse),
+
+        "RMSE": float(lesion_rmse),
+
+        "MAE": float(lesion_mae),
+
+        "R2": float(lesion_r2),
+
+        "Correlation":
+            float(lesion_correlation)
+
+    },
+
+    "Samples": int(len(disease_targets))
 
 }
 
@@ -268,77 +390,121 @@ print("\n" + "=" * 60)
 print("GRU TEST RESULTS")
 print("=" * 60)
 
+
+print("\nDisease Severity:")
+
 print(
-    f"Samples       : {len(targets)}"
+    f"MSE         : {disease_mse:.6f}"
 )
 
 print(
-    f"MSE           : {mse:.6f}"
+    f"RMSE        : {disease_rmse:.6f}"
 )
 
 print(
-    f"RMSE          : {rmse:.6f}"
+    f"MAE         : {disease_mae:.6f}"
 )
 
 print(
-    f"MAE           : {mae:.6f}"
+    f"R²          : {disease_r2:.6f}"
 )
 
 print(
-    f"R²            : {r2:.6f}"
+    f"Correlation : {disease_correlation:.6f}"
+)
+
+
+print("\nLesion Area:")
+
+print(
+    f"MSE         : {lesion_mse:.6f}"
 )
 
 print(
-    f"Correlation   : {correlation:.6f}"
+    f"RMSE        : {lesion_rmse:.6f}"
 )
 
+print(
+    f"MAE         : {lesion_mae:.6f}"
+)
+
+print(
+    f"R²          : {lesion_r2:.6f}"
+)
+
+print(
+    f"Correlation : {lesion_correlation:.6f}"
+)
+
+
+# ============================================================
+# Prediction summaries
+# ============================================================
 
 print("\n" + "=" * 60)
 print("PREDICTION SUMMARY")
 print("=" * 60)
 
+print("\nDisease:")
+
 print(
-    f"Actual mean   : {targets.mean():.6f}"
+    f"Actual mean    : "
+    f"{disease_targets.mean():.6f}"
 )
 
 print(
-    f"Predicted mean: {predictions.mean():.6f}"
+    f"Predicted mean : "
+    f"{disease_predictions.mean():.6f}"
 )
 
 print(
-    f"Actual max    : {targets.max():.6f}"
+    f"Actual max     : "
+    f"{disease_targets.max():.6f}"
 )
 
 print(
-    f"Predicted max : {predictions.max():.6f}"
+    f"Predicted max  : "
+    f"{disease_predictions.max():.6f}"
 )
 
+
+print("\nLesion Area:")
+
+print(
+    f"Actual mean    : "
+    f"{lesion_targets_original.mean():.2f}"
+)
+
+print(
+    f"Predicted mean : "
+    f"{lesion_predictions_original.mean():.2f}"
+)
+
+print(
+    f"Actual max     : "
+    f"{lesion_targets_original.max():.2f}"
+)
+
+print(
+    f"Predicted max  : "
+    f"{lesion_predictions_original.max():.2f}"
+)
+
+
+# ============================================================
+# Save confirmation
+# ============================================================
 
 print("\n" + "=" * 60)
-print("WORST 10 PREDICTIONS")
+
+print(
+    "Saved -> "
+    "outputs/multimodal_gru_test_metrics.json"
+)
+
+print(
+    "Saved -> "
+    "outputs/multimodal_gru_predictions.csv"
+)
+
 print("=" * 60)
-
-worst = prediction_df.sort_values(
-    "Absolute_Error",
-    ascending=False
-).head(10)
-
-print(
-    worst[
-        [
-            "Actual",
-            "Predicted",
-            "Error",
-            "Absolute_Error"
-        ]
-    ].to_string(
-        index=False
-    )
-)
-
-
-print("\nSaved ->", OUTPUT_PATH)
-
-print(
-    "Saved -> outputs/gru_predictions.csv"
-)

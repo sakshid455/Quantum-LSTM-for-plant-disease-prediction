@@ -32,10 +32,6 @@ os.makedirs("checkpoints", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 
 
-# ============================================================
-# Header
-# ============================================================
-
 print("=" * 60)
 print("MULTIMODAL CLASSICAL GRU TRAINING")
 print("=" * 60)
@@ -101,14 +97,10 @@ best_val_loss = float("inf")
 
 
 # ============================================================
-# Training loop
+# Training
 # ============================================================
 
 for epoch in range(EPOCHS):
-
-    # --------------------------------------------------------
-    # Training
-    # --------------------------------------------------------
 
     model.train()
 
@@ -116,56 +108,32 @@ for epoch in range(EPOCHS):
 
     for X, y_disease, y_lesion in train_loader:
 
-        # Move inputs and disease target to device
         X = X.to(DEVICE)
-
         y_disease = y_disease.to(DEVICE)
-
-        # ----------------------------------------------------
-        # IMPORTANT:
-        # Make target explicitly 1-D
-        # ----------------------------------------------------
-
-        y_disease = y_disease.view(-1)
+        y_lesion = y_lesion.to(DEVICE)
 
         optimizer.zero_grad()
 
-        # ----------------------------------------------------
-        # GRU predicts disease severity only
-        # ----------------------------------------------------
+        disease_output, lesion_output = model(X)
 
-        output = model(X)
-
-        # Explicitly flatten model output
-        output = output.view(-1)
-
-        # ----------------------------------------------------
-        # Safety check
-        # ----------------------------------------------------
-
-        if output.shape != y_disease.shape:
-            raise RuntimeError(
-                f"Shape mismatch: "
-                f"output={output.shape}, "
-                f"target={y_disease.shape}"
-            )
-
-        # ----------------------------------------------------
-        # Loss
-        # ----------------------------------------------------
-
-        loss = criterion(
-            output,
+        disease_loss = criterion(
+            disease_output,
             y_disease
         )
 
-        # ----------------------------------------------------
-        # Backpropagation
-        # ----------------------------------------------------
+        lesion_loss = criterion(
+            lesion_output,
+            y_lesion
+        )
+
+        # Same multitask weighting as LSTM
+        loss = (
+            disease_loss
+            + 0.5 * lesion_loss
+        )
 
         loss.backward()
 
-        # Prevent unstable gradients
         torch.nn.utils.clip_grad_norm_(
             model.parameters(),
             max_norm=1.0
@@ -176,13 +144,9 @@ for epoch in range(EPOCHS):
         running_train_loss += loss.item()
 
 
-    # --------------------------------------------------------
-    # Average training loss
-    # --------------------------------------------------------
-
     train_loss = (
-        running_train_loss /
-        len(train_loader)
+        running_train_loss
+        / len(train_loader)
     )
 
 
@@ -193,67 +157,65 @@ for epoch in range(EPOCHS):
     model.eval()
 
     running_val_loss = 0.0
+    running_val_disease_loss = 0.0
+    running_val_lesion_loss = 0.0
 
     with torch.no_grad():
 
         for X, y_disease, y_lesion in val_loader:
 
             X = X.to(DEVICE)
-
             y_disease = y_disease.to(DEVICE)
+            y_lesion = y_lesion.to(DEVICE)
 
-            # Explicitly make target 1-D
-            y_disease = y_disease.view(-1)
+            disease_output, lesion_output = model(X)
 
-            # Prediction
-            output = model(X)
-
-            # Explicitly flatten prediction
-            output = output.view(-1)
-
-            # Safety check
-            if output.shape != y_disease.shape:
-                raise RuntimeError(
-                    f"Validation shape mismatch: "
-                    f"output={output.shape}, "
-                    f"target={y_disease.shape}"
-                )
-
-            # Validation loss
-            loss = criterion(
-                output,
+            disease_loss = criterion(
+                disease_output,
                 y_disease
             )
 
+            lesion_loss = criterion(
+                lesion_output,
+                y_lesion
+            )
+
+            loss = (
+                disease_loss
+                + 0.5 * lesion_loss
+            )
+
             running_val_loss += loss.item()
+            running_val_disease_loss += disease_loss.item()
+            running_val_lesion_loss += lesion_loss.item()
 
-
-    # --------------------------------------------------------
-    # Average validation loss
-    # --------------------------------------------------------
 
     val_loss = (
-        running_val_loss /
-        len(val_loader)
+        running_val_loss
+        / len(val_loader)
     )
 
+    val_disease_loss = (
+        running_val_disease_loss
+        / len(val_loader)
+    )
 
-    # ========================================================
-    # Store history
-    # ========================================================
+    val_lesion_loss = (
+        running_val_lesion_loss
+        / len(val_loader)
+    )
+
 
     train_losses.append(train_loss)
     val_losses.append(val_loss)
 
 
-    # ========================================================
-    # Print progress
-    # ========================================================
-
     print(
-        f"Epoch {epoch + 1}/{EPOCHS} | "
-        f"Train Loss: {train_loss:.6f} | "
-        f"Val Loss: {val_loss:.6f}"
+        f"Epoch {epoch + 1}/{EPOCHS}"
+        f" | Train Loss: {train_loss:.6f}"
+        f" | Val Loss: {val_loss:.6f}"
+        f" | Disease Val: {val_disease_loss:.6f}"
+        f" | Lesion Val: {val_lesion_loss:.6f}"
     )
 
 
@@ -267,7 +229,7 @@ for epoch in range(EPOCHS):
 
         torch.save(
             model.state_dict(),
-            "checkpoints/best_gru_model.pth"
+            "checkpoints/best_multimodal_gru.pth"
         )
 
         print("  -> Best GRU model saved")
@@ -277,22 +239,17 @@ for epoch in range(EPOCHS):
 # Save loss history
 # ============================================================
 
-loss_df = pd.DataFrame({
+history = pd.DataFrame({
     "Epoch": range(1, EPOCHS + 1),
     "Train Loss": train_losses,
     "Validation Loss": val_losses
 })
 
-
-loss_df.to_csv(
-    "outputs/gru_loss_history.csv",
+history.to_csv(
+    "outputs/multimodal_gru_loss_history.csv",
     index=False
 )
 
-
-# ============================================================
-# Final output
-# ============================================================
 
 print("\n" + "=" * 60)
 print("GRU TRAINING FINISHED")
@@ -305,10 +262,10 @@ print(
 
 print(
     "Saved -> "
-    "checkpoints/best_gru_model.pth"
+    "checkpoints/best_multimodal_gru.pth"
 )
 
 print(
     "Saved -> "
-    "outputs/gru_loss_history.csv"
+    "outputs/multimodal_gru_loss_history.csv"
 )

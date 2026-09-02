@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from torch.utils.data import Dataset, DataLoader
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 
 
@@ -59,179 +59,140 @@ def create_multimodal_loaders(
     y_lesion = data["y_lesion_area"]
     leaf_ids = data["leaf_ids"]
 
-    unique_leaves = np.unique(
-        leaf_ids
-    )
+    print("=" * 60)
+    print("LEAKAGE-FREE MULTIMODAL DATA SPLIT")
+    print("=" * 60)
+
+    print("Original X shape:", X.shape)
+    print("Disease target shape:", y_disease.shape)
+    print("Lesion target shape:", y_lesion.shape)
 
 
     # ========================================================
-    # Calculate leaf-level disease severity
-    # ========================================================
-
-    leaf_disease_mean = {}
-
-    for leaf in unique_leaves:
-
-        mask = leaf_ids == leaf
-
-        leaf_disease_mean[leaf] = np.mean(
-            y_disease[mask]
-        )
-
-
-    # ========================================================
-    # Create severity groups
+    # Group split by leaf
     #
-    # We use leaf-level statistics so sequences from the
-    # same leaf can never cross train/val/test.
+    # IMPORTANT:
+    # No target values are used to construct the split.
+    # Every leaf belongs to exactly one partition.
     # ========================================================
 
-    severity_values = np.array([
-        leaf_disease_mean[leaf]
-        for leaf in unique_leaves
-    ])
+    unique_leaves = np.unique(leaf_ids)
 
-
-    # Three approximately balanced severity groups.
-    #
-    # qcut-like percentile boundaries are calculated manually
-    # so that we can work directly with leaf IDs.
-
-    q1 = np.percentile(
-        severity_values,
-        33.333333
-    )
-
-    q2 = np.percentile(
-        severity_values,
-        66.666667
+    print(
+        "Unique leaves:",
+        len(unique_leaves)
     )
 
 
-    severity_labels = []
-
-    for leaf in unique_leaves:
-
-        value = leaf_disease_mean[leaf]
-
-        if value <= q1:
-            severity_labels.append(0)
-
-        elif value <= q2:
-            severity_labels.append(1)
-
-        else:
-            severity_labels.append(2)
-
-
-    severity_labels = np.array(
-        severity_labels
-    )
-
-
-    # ========================================================
+    # --------------------------------------------------------
     # First split:
-    #
     # 70% train
     # 30% temporary
-    #
-    # Stratified by leaf severity
-    # ========================================================
+    # --------------------------------------------------------
 
-    train_leaves, temp_leaves = train_test_split(
-        unique_leaves,
+    gss_1 = GroupShuffleSplit(
+        n_splits=1,
         test_size=0.30,
-        random_state=random_state,
-        stratify=severity_labels
+        random_state=random_state
+    )
+
+    train_idx, temp_idx = next(
+        gss_1.split(
+            X,
+            y_disease,
+            groups=leaf_ids
+        )
     )
 
 
-    # ========================================================
-    # Severity labels for temporary leaves
-    # ========================================================
+    train_leaves = np.unique(
+        leaf_ids[train_idx]
+    )
 
-    severity_lookup = {
-        leaf: severity
-        for leaf, severity
-        in zip(unique_leaves, severity_labels)
-    }
+    temp_leaves = np.unique(
+        leaf_ids[temp_idx]
+    )
 
 
-    temp_severity = np.array([
-        severity_lookup[leaf]
-        for leaf in temp_leaves
-    ])
-
-
-    # ========================================================
+    # --------------------------------------------------------
     # Second split:
-    #
     # 15% validation
     # 15% test
-    #
-    # Stratified by severity
-    # ========================================================
+    # --------------------------------------------------------
 
-    val_leaves, test_leaves = train_test_split(
-        temp_leaves,
+    gss_2 = GroupShuffleSplit(
+        n_splits=1,
         test_size=0.50,
-        random_state=random_state,
-        stratify=temp_severity
+        random_state=random_state
+    )
+
+    temp_relative_train, temp_relative_test = next(
+        gss_2.split(
+            temp_idx,
+            y_disease[temp_idx],
+            groups=leaf_ids[temp_idx]
+        )
+    )
+
+    val_idx = temp_idx[temp_relative_train]
+    test_idx = temp_idx[temp_relative_test]
+
+
+    val_leaves = np.unique(
+        leaf_ids[val_idx]
+    )
+
+    test_leaves = np.unique(
+        leaf_ids[test_idx]
     )
 
 
     # ========================================================
-    # Masks
+    # Safety checks
     # ========================================================
 
-    train_mask = np.isin(
-        leaf_ids,
-        train_leaves
+    train_leaf_set = set(train_leaves)
+    val_leaf_set = set(val_leaves)
+    test_leaf_set = set(test_leaves)
+
+    assert train_leaf_set.isdisjoint(
+        val_leaf_set
     )
 
-    val_mask = np.isin(
-        leaf_ids,
-        val_leaves
+    assert train_leaf_set.isdisjoint(
+        test_leaf_set
     )
 
-    test_mask = np.isin(
-        leaf_ids,
-        test_leaves
+    assert val_leaf_set.isdisjoint(
+        test_leaf_set
     )
 
-
-    # ========================================================
-    # Split X
-    # ========================================================
-
-    X_train = X[train_mask]
-    X_val = X[val_mask]
-    X_test = X[test_mask]
+    print("\nLeaf split verified: NO overlap.")
 
 
     # ========================================================
-    # Split disease targets
+    # Split data
     # ========================================================
 
-    disease_train = y_disease[train_mask]
-    disease_val = y_disease[val_mask]
-    disease_test = y_disease[test_mask]
+    X_train = X[train_idx]
+    X_val = X[val_idx]
+    X_test = X[test_idx]
 
 
-    # ========================================================
-    # Split lesion targets
-    # ========================================================
+    disease_train = y_disease[train_idx]
+    disease_val = y_disease[val_idx]
+    disease_test = y_disease[test_idx]
 
-    lesion_train = y_lesion[train_mask]
-    lesion_val = y_lesion[val_mask]
-    lesion_test = y_lesion[test_mask]
+
+    lesion_train = y_lesion[train_idx]
+    lesion_val = y_lesion[val_idx]
+    lesion_test = y_lesion[test_idx]
 
 
     # ========================================================
     # Normalize input features
     #
-    # IMPORTANT:
-    # scaler is fitted ONLY on training data.
+    # FIT ONLY ON TRAINING DATA
     # ========================================================
 
     n_features = X_train.shape[-1]
@@ -242,6 +203,17 @@ def create_multimodal_loaders(
         -1,
         n_features
     )
+
+    X_val_2d = X_val.reshape(
+        -1,
+        n_features
+    )
+
+    X_test_2d = X_test.reshape(
+        -1,
+        n_features
+    )
+
 
     scaler.fit(
         X_train_2d
@@ -254,22 +226,14 @@ def create_multimodal_loaders(
         X_train.shape
     )
 
-
     X_val = scaler.transform(
-        X_val.reshape(
-            -1,
-            n_features
-        )
+        X_val_2d
     ).reshape(
         X_val.shape
     )
 
-
     X_test = scaler.transform(
-        X_test.reshape(
-            -1,
-            n_features
-        )
+        X_test_2d
     ).reshape(
         X_test.shape
     )
@@ -278,8 +242,7 @@ def create_multimodal_loaders(
     # ========================================================
     # Normalize lesion target
     #
-    # IMPORTANT:
-    # mean/std calculated ONLY from training data.
+    # FIT ONLY ON TRAINING TARGETS
     # ========================================================
 
     lesion_mean = lesion_train.mean()
@@ -287,7 +250,6 @@ def create_multimodal_loaders(
     lesion_std = lesion_train.std()
 
     if lesion_std == 0:
-
         lesion_std = 1.0
 
 
@@ -295,11 +257,9 @@ def create_multimodal_loaders(
         lesion_train - lesion_mean
     ) / lesion_std
 
-
     lesion_val = (
         lesion_val - lesion_mean
     ) / lesion_std
-
 
     lesion_test = (
         lesion_test - lesion_mean
@@ -316,13 +276,11 @@ def create_multimodal_loaders(
         lesion_train
     )
 
-
     val_dataset = MultimodalTemporalDataset(
         X_val,
         disease_val,
         lesion_val
     )
-
 
     test_dataset = MultimodalTemporalDataset(
         X_test,
@@ -341,13 +299,11 @@ def create_multimodal_loaders(
         shuffle=True
     )
 
-
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
         shuffle=False
     )
-
 
     test_loader = DataLoader(
         test_dataset,
@@ -360,47 +316,16 @@ def create_multimodal_loaders(
     # Print split information
     # ========================================================
 
-    print("=" * 60)
-    print("SEVERITY-STRATIFIED MULTIMODAL DATA SPLIT")
-    print("=" * 60)
-
-    print(
-        "Total leaves :",
-        len(unique_leaves)
-    )
-
-    print(
-        "Train leaves :",
-        len(train_leaves)
-    )
-
-    print(
-        "Val leaves   :",
-        len(val_leaves)
-    )
-
-    print(
-        "Test leaves  :",
-        len(test_leaves)
-    )
-
+    print()
+    print("TRAIN leaves      :", len(train_leaves))
+    print("VALIDATION leaves :", len(val_leaves))
+    print("TEST leaves       :", len(test_leaves))
 
     print()
 
-    print(
-        "Train sequences:",
-        len(train_dataset)
-    )
-
-    print(
-        "Val sequences  :",
-        len(val_dataset)
-    )
-
-    print(
-        "Test sequences :",
-        len(test_dataset)
-    )
+    print("TRAIN sequences      :", len(train_dataset))
+    print("VALIDATION sequences :", len(val_dataset))
+    print("TEST sequences       :", len(test_dataset))
 
 
     # ========================================================
@@ -408,7 +333,6 @@ def create_multimodal_loaders(
     # ========================================================
 
     print()
-
     print("Disease target:")
 
     print(
@@ -437,46 +361,17 @@ def create_multimodal_loaders(
     # ========================================================
 
     print()
-
     print("Lesion target:")
 
     print(
-        "  Mean:",
+        "  Train mean:",
         lesion_mean
     )
 
     print(
-        "  Std :",
+        "  Train std :",
         lesion_std
     )
-
-
-    # ========================================================
-    # Print actual leaves
-    # ========================================================
-
-    print()
-
-    print("TRAIN LEAVES:")
-
-    for leaf in sorted(train_leaves):
-        print(" ", leaf)
-
-
-    print()
-
-    print("VALIDATION LEAVES:")
-
-    for leaf in sorted(val_leaves):
-        print(" ", leaf)
-
-
-    print()
-
-    print("TEST LEAVES:")
-
-    for leaf in sorted(test_leaves):
-        print(" ", leaf)
 
 
     # ========================================================

@@ -6,7 +6,7 @@ class GRUModel(nn.Module):
 
     def __init__(
         self,
-        input_size=768,
+        input_size=791,
         hidden_size=32,
         num_layers=1
     ):
@@ -19,17 +19,38 @@ class GRUModel(nn.Module):
             batch_first=True
         )
 
-        self.fc = nn.Linear(
+        # Disease severity head
+        self.disease_head = nn.Linear(
             hidden_size,
             1
         )
 
+        # Lesion area head
+        self.lesion_head = nn.Linear(
+            hidden_size,
+            1
+        )
+
+
     def forward(self, x):
+
+        # x:
+        # [batch, sequence_length, 791]
 
         output, hidden = self.gru(x)
 
-        last_output = output[:, -1, :]
+        # Last temporal step
+        last_hidden = output[:, -1, :]
 
-        prediction = self.fc(last_output)
+        disease_output = self.disease_head(
+            last_hidden
+        )
 
-        return prediction
+        lesion_output = self.lesion_head(
+            last_hidden
+        )
+
+        return (
+            disease_output,
+            lesion_output
+        )
