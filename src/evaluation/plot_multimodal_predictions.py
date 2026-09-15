@@ -12,6 +12,13 @@ INPUT_PATH = "outputs/test_predictions.csv"
 
 df = pd.read_csv(INPUT_PATH)
 
+if "actual_disease" not in df.columns and "true_disease" in df.columns:
+    df["actual_disease"] = df["true_disease"]
+if "actual_lesion" not in df.columns and "true_lesion_area" in df.columns:
+    df["actual_lesion"] = df["true_lesion_area"]
+if "predicted_lesion" not in df.columns and "predicted_lesion_area" in df.columns:
+    df["predicted_lesion"] = df["predicted_lesion_area"]
+
 
 # ============================================================
 # Disease: Actual vs Predicted

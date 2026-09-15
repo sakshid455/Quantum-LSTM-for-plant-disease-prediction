@@ -1,0 +1,12 @@
+{
+    "exp_id": 3,
+    "name": "Exp 3: Specialized MLP Heads + Loss Balancing + Cosine Annealing",
+    "parameters": 15010,
+    "best_epoch": 39,
+    "epochs_completed": 49,
+    "best_val_loss": 0.01908615045249462,
+    "val_disease_mse": 0.0006594166759736048,
+    "val_disease_mae": 0.021717548965890475,
+    "val_lesion_mse": 3705292032.0,
+    "val_lesion_mae": 57429.38671875
+}

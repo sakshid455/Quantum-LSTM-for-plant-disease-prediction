@@ -1,0 +1,114 @@
+{
+    "audit_timestamp": "2026-09-13",
+    "project": "Hybrid Vision Transformer-QLSTM for Wheat Foliar Disease Progression",
+    "proposed_model": "Multimodal QLSTM (Experiment 3)",
+    "dataset": {
+        "path": "data/sequences/multimodal_temporal_sequences.npz",
+        "X_shape": [
+            324,
+            4,
+            791
+        ],
+        "sequence_length": 4,
+        "feature_dimension": 791,
+        "vit_features": 768,
+        "metadata_features": 23,
+        "total_sequences": 324,
+        "unique_leaves": 30,
+        "status": "PASS"
+    },
+    "data_split": {
+        "method": "GroupShuffleSplit by leaf_UID",
+        "random_seed": 42,
+        "train_leaves": 21,
+        "val_leaves": 4,
+        "test_leaves": 5,
+        "train_sequences": 226,
+        "val_sequences": 47,
+        "test_sequences": 51,
+        "leakage_check": "Zero leaf overlap between Train, Validation, and Test",
+        "status": "PASS"
+    },
+    "preprocessing": {
+        "feature_normalization": "StandardScaler fitted strictly on training observations",
+        "lesion_normalization": "Z-score normalization fitted strictly on training targets (mean=143622.75, std=185553.75)",
+        "evaluation_unnormalization": "All reported test metrics calculated in original target units",
+        "status": "PASS"
+    },
+    "training_protocol": {
+        "checkpoint_selection": "Selected strictly by minimum validation loss (no test feedback)",
+        "best_validation_epoch": 39,
+        "best_validation_loss": 0.019086,
+        "early_stopping": "Triggered at epoch 49 with patience=10",
+        "status": "PASS"
+    },
+    "architecture_and_parameters": {
+        "model_class": "QLSTMModel",
+        "hidden_size": 32,
+        "qubits": 4,
+        "quantum_simulator": "PennyLane default.qubit",
+        "embedding": "AngleEmbedding",
+        "ansatz": "StronglyEntanglingLayers (2 layers, 24 weights per gate)",
+        "prediction_heads": "Dual 2-layer MLP (Linear(32,16) -> GELU -> Dropout(0.1) -> Linear(16,1))",
+        "loss_weights": "Disease=10.0, Lesion=0.5",
+        "optimizer": "Adam (lr=1e-4, max_grad_norm=1.0)",
+        "scheduler": "CosineAnnealingLR (T_max=50, eta_min=1e-5)",
+        "trainable_parameters": 15010,
+        "parameter_reduction_vs_classical_lstm": "-85.8%",
+        "status": "PASS"
+    },
+    "test_verification": {
+        "test_sample_count": 51,
+        "recomputed_metrics_match_json": true,
+        "disease_severity": {
+            "MSE": 0.0010842988133990023,
+            "RMSE": 0.03292869285894905,
+            "MAE": 0.025093262840274515,
+            "R2": 0.8400741661396431
+        },
+        "lesion_area": {
+            "MSE": 12506699153.819307,
+            "RMSE": 111833.35438865861,
+            "MAE": 80246.72421568626,
+            "R2": 0.6366245987354291
+        },
+        "status": "PASS"
+    },
+    "baseline_comparison": {
+        "original_qlstm_baseline": {
+            "disease_r2": 0.726309,
+            "lesion_r2": 0.575839,
+            "parameters": 13986
+        },
+        "improved_qlstm_exp3": {
+            "disease_r2": 0.8400741661396431,
+            "lesion_r2": 0.6366245987354291,
+            "parameters": 15010
+        },
+        "delta_disease_r2": "+0.113765 (+15.7% relative R2 gain, -41.6% MSE reduction)",
+        "delta_lesion_r2": "+0.060786 (+10.6% relative R2 gain, -14.3% MSE reduction)",
+        "status": "PASS"
+    },
+    "modality_ablation_summary": {
+        "metadata_only_r2": {
+            "disease": 0.676482,
+            "lesion": 0.172756,
+            "parameters": 2722
+        },
+        "vit_only_r2": {
+            "disease": 0.005438,
+            "lesion": -0.044797,
+            "parameters": 14642
+        },
+        "multimodal_r2": {
+            "disease": 0.8400741661396431,
+            "lesion": 0.6366245987354291,
+            "parameters": 15010
+        },
+        "conclusion": "Multimodal fusion significantly outperforms unimodal baselines, confirming research hypothesis."
+    },
+    "final_audit_conclusion": {
+        "status": "PASS",
+        "recommendation": "APPROVED - Multimodal QLSTM (Experiment 3) is verified, reproducible, and accepted as the proposed final research model."
+    }
+}

@@ -9,28 +9,44 @@ class QLSTMModel(nn.Module):
     def __init__(
         self,
         input_size=791,
-        hidden_size=32
+        hidden_size=32,
+        mlp_heads=False,
+        dropout=0.1
     ):
         super().__init__()
 
         self.hidden_size = hidden_size
+        self.mlp_heads = mlp_heads
 
         self.cell = QLSTMCell(
             input_size=input_size,
             hidden_size=hidden_size
         )
 
-        # Disease progression prediction
-        self.disease_head = nn.Linear(
-            hidden_size,
-            1
-        )
-
-        # Lesion area prediction
-        self.lesion_head = nn.Linear(
-            hidden_size,
-            1
-        )
+        if mlp_heads:
+            # Task-specific non-linear projection heads
+            self.disease_head = nn.Sequential(
+                nn.Linear(hidden_size, hidden_size // 2),
+                nn.GELU(),
+                nn.Dropout(dropout),
+                nn.Linear(hidden_size // 2, 1)
+            )
+            self.lesion_head = nn.Sequential(
+                nn.Linear(hidden_size, hidden_size // 2),
+                nn.GELU(),
+                nn.Dropout(dropout),
+                nn.Linear(hidden_size // 2, 1)
+            )
+        else:
+            # Baseline linear heads
+            self.disease_head = nn.Linear(
+                hidden_size,
+                1
+            )
+            self.lesion_head = nn.Linear(
+                hidden_size,
+                1
+            )
 
     def forward(self, x):
 

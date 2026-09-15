@@ -1,0 +1,20 @@
+{
+    "modality": "metadata",
+    "input_features": 23,
+    "parameters": 2722,
+    "best_validation_epoch": 50,
+    "best_validation_loss": 0.040375701462229095,
+    "epochs_completed": 50,
+    "Disease Severity": {
+        "MSE": 0.0021934546530246735,
+        "RMSE": 0.04683433199080215,
+        "MAE": 0.027777422219514847,
+        "R2": 0.6764821410179138
+    },
+    "Lesion Area": {
+        "MSE": 28472195072.0,
+        "RMSE": 168737.0589763849,
+        "MAE": 134563.71875,
+        "R2": 0.17275577783584595
+    }
+}

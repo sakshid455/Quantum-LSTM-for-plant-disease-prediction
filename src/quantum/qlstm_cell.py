@@ -5,7 +5,7 @@ from .quantum_layer import QuantumLayer
 
 class QLSTMCell(nn.Module):
 
-    def __init__(self, input_size=768, hidden_size=32):
+    def __init__(self, input_size=791, hidden_size=32):
         super().__init__()
 
         self.hidden_size = hidden_size

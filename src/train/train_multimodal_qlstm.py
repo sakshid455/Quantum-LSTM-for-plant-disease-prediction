@@ -1,64 +1,68 @@
 import os
 import json
-
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
-import pandas as pd
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.model_selection import GroupShuffleSplit
+import sys
 
-from sklearn.metrics import (
-    mean_squared_error,
-    mean_absolute_error,
-    r2_score
-)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from src.quantum.qlstm_model import QLSTMModel
 from src.dataset.multimodal_dataloader import create_multimodal_loaders
 
 
 # ============================================================
-# Configuration
+# 1. Reproducibility Seed & Device Setup
 # ============================================================
 
-DEVICE = torch.device(
-    "cuda" if torch.cuda.is_available() else "cpu"
-)
+def set_seed(seed=42):
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
-EPOCHS = 30
+
+set_seed(42)
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# ============================================================
+# 2. Hyperparameter Configuration
+# ============================================================
+
+EPOCHS = 50
 LEARNING_RATE = 1e-4
 BATCH_SIZE = 8
 
-# Multi-task loss weight
-DISEASE_LOSS_WEIGHT = 1.0
+# Balanced multi-task loss weights:
+# Normalized disease MSE is ~0.001-0.002, normalized lesion MSE is ~0.05-0.10.
+# A 10x weighting on disease balances the gradient magnitudes across both tasks.
+DISEASE_LOSS_WEIGHT = 10.0
 LESION_LOSS_WEIGHT = 0.5
 
-# Gradient clipping
 MAX_GRAD_NORM = 1.0
-
-# Early stopping
-PATIENCE = 5
-
-
-# ============================================================
-# Output directories
-# ============================================================
+PATIENCE = 10
+HIDDEN_SIZE = 32
+USE_MLP_HEADS = True  # Specialized 2-layer MLP projection heads
 
 os.makedirs("checkpoints", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 
-
-# ============================================================
-# Start
-# ============================================================
-
-print("=" * 60)
-print("MULTIMODAL QLSTM TRAINING")
-print("=" * 60)
-
-print("Device:", DEVICE)
+print("=" * 70)
+print("MULTIMODAL QLSTM TRAINING PIPELINE (CORRECTED & DIAGNOSTIC)")
+print("=" * 70)
+print(f"Device: {DEVICE}")
+print(f"Epochs: {EPOCHS} | Batch Size: {BATCH_SIZE} | Learning Rate: {LEARNING_RATE}")
+print(f"Loss Weights: Disease = {DISEASE_LOSS_WEIGHT} | Lesion = {LESION_LOSS_WEIGHT}")
+print(f"QLSTM Hidden Size: {HIDDEN_SIZE} | Specialized MLP Heads: {USE_MLP_HEADS}")
+print(f"Early Stopping Patience: {PATIENCE} | Max Grad Norm: {MAX_GRAD_NORM}")
 
 
 # ============================================================
-# Dataset
+# 3. Data Loading & Leakage-Free Splitting
 # ============================================================
 
 (
@@ -68,650 +72,296 @@ print("Device:", DEVICE)
     lesion_mean,
     lesion_std
 ) = create_multimodal_loaders(
-    batch_size=BATCH_SIZE
+    batch_size=BATCH_SIZE,
+    random_state=42,
+    modality="multimodal"
 )
+
+# Extract test split metadata (leaf IDs and sequence indices) for predictions export
+raw_data = np.load("data/sequences/multimodal_temporal_sequences.npz", allow_pickle=True)
+X_raw = raw_data["X"]
+y_disease_raw = raw_data["y_placl"]
+y_lesion_raw = raw_data["y_lesion_area"]
+leaf_ids_raw = raw_data["leaf_ids"]
+
+gss_1 = GroupShuffleSplit(n_splits=1, test_size=0.30, random_state=42)
+train_idx, temp_idx = next(gss_1.split(X_raw, y_disease_raw, groups=leaf_ids_raw))
+
+gss_2 = GroupShuffleSplit(n_splits=1, test_size=0.50, random_state=42)
+temp_rel_val, temp_rel_test = next(gss_2.split(temp_idx, y_disease_raw[temp_idx], groups=leaf_ids_raw[temp_idx]))
+
+test_idx = temp_idx[temp_rel_test]
+test_leaf_ids = leaf_ids_raw[test_idx]
+
+# Diagnostic statistics printing
+sample_batch_x, sample_batch_yd, sample_batch_yl = next(iter(train_loader))
+vit_slice = sample_batch_x[:, :, :768]
+meta_slice = sample_batch_x[:, :, 768:]
+
+print("\n--- DATASET & FEATURE DIAGNOSTICS ---")
+print(f"Multimodal X shape per sequence: {sample_batch_x.shape[1:]} (4 steps, 791 features)")
+print(f"  ViT features (0-767)      : Normalized mean={vit_slice.mean():.4f}, std={vit_slice.std():.4f}, min={vit_slice.min():.4f}, max={vit_slice.max():.4f}")
+print(f"  Metadata features (768-790): Normalized mean={meta_slice.mean():.4f}, std={meta_slice.std():.4f}, min={meta_slice.min():.4f}, max={meta_slice.max():.4f}")
+print(f"Lesion Target Normalization Parameters (Train-Only):")
+print(f"  Mean = {lesion_mean:,.2f} px² | Std = {lesion_std:,.2f} px²")
+print(f"Disease Target Statistics (Original [0, 1] Scale):")
+print(f"  Train mean = {y_disease_raw[train_idx].mean():.4f}, std = {y_disease_raw[train_idx].std():.4f}")
+print(f"Test Set: {len(test_idx)} sequences across {len(np.unique(test_leaf_ids))} leaves: {np.unique(test_leaf_ids).tolist()}")
 
 
 # ============================================================
-# Model
+# 4. Model Instantiation & Parameter Diagnostics
 # ============================================================
 
 model = QLSTMModel(
     input_size=791,
-    hidden_size=32
+    hidden_size=HIDDEN_SIZE,
+    mlp_heads=USE_MLP_HEADS,
+    dropout=0.1
 ).to(DEVICE)
 
-
-print("\nModel:")
-print(model)
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"\nTrainable Model Parameters: {total_params:,}")
 
 
 # ============================================================
-# Loss function
+# 5. Optimization & Learning Rate Scheduling
 # ============================================================
 
 criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-
-# ============================================================
-# Optimizer
-# ============================================================
-
-optimizer = torch.optim.Adam(
-    model.parameters(),
-    lr=LEARNING_RATE
+# Cosine annealing scheduler to eliminate late-epoch learning rate oscillations
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    optimizer,
+    T_max=EPOCHS,
+    eta_min=1e-5
 )
 
-
-# ============================================================
-# Training history
-# ============================================================
-
-train_losses = []
-val_losses = []
-
-train_disease_losses = []
-train_lesion_losses = []
-
-val_disease_losses = []
-val_lesion_losses = []
+train_losses, val_losses = [], []
+train_disease_losses, train_lesion_losses = [], []
+val_disease_losses, val_lesion_losses = [], []
 
 best_val_loss = float("inf")
-
+best_epoch = 0
 epochs_without_improvement = 0
 
+checkpoint_path = "checkpoints/best_multimodal_qlstm.pth"
+
 
 # ============================================================
-# Training
+# 6. Training & Validation Loop
 # ============================================================
+
+print("\n" + "=" * 70)
+print("BEGINNING TRAINING WITH VALIDATION-GUIDED SELECTION")
+print("=" * 70)
 
 for epoch in range(EPOCHS):
-
-    # --------------------------------------------------------
-    # Training mode
-    # --------------------------------------------------------
-
     model.train()
-
-    running_train_loss = 0.0
-    running_train_disease_loss = 0.0
-    running_train_lesion_loss = 0.0
-
-
-    # --------------------------------------------------------
-    # Training batches
-    # --------------------------------------------------------
+    r_train_loss, r_train_d, r_train_l = 0.0, 0.0, 0.0
 
     for X, y_disease, y_lesion in train_loader:
-
         X = X.to(DEVICE)
         y_disease = y_disease.to(DEVICE)
         y_lesion = y_lesion.to(DEVICE)
 
-        # Reset gradients
         optimizer.zero_grad()
+        disease_out, lesion_out = model(X)
 
+        loss_d = criterion(disease_out, y_disease)
+        loss_l = criterion(lesion_out, y_lesion)
 
-        # ----------------------------------------------------
-        # Forward pass
-        # ----------------------------------------------------
-
-        disease_output, lesion_output = model(X)
-
-
-        # ----------------------------------------------------
-        # Individual task losses
-        # ----------------------------------------------------
-
-        disease_loss = criterion(
-            disease_output,
-            y_disease
-        )
-
-        lesion_loss = criterion(
-            lesion_output,
-            y_lesion
-        )
-
-
-        # ----------------------------------------------------
-        # Weighted multi-task loss
-        # ----------------------------------------------------
-
-        loss = (
-            DISEASE_LOSS_WEIGHT * disease_loss
-            +
-            LESION_LOSS_WEIGHT * lesion_loss
-        )
-
-
-        # ----------------------------------------------------
-        # Backpropagation
-        # ----------------------------------------------------
+        # Balanced multi-task loss
+        loss = DISEASE_LOSS_WEIGHT * loss_d + LESION_LOSS_WEIGHT * loss_l
 
         loss.backward()
-
-
-        # ----------------------------------------------------
-        # Gradient clipping
-        # ----------------------------------------------------
-
-        torch.nn.utils.clip_grad_norm_(
-            model.parameters(),
-            max_norm=MAX_GRAD_NORM
-        )
-
-
-        # ----------------------------------------------------
-        # Optimizer step
-        # ----------------------------------------------------
-
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=MAX_GRAD_NORM)
         optimizer.step()
 
+        r_train_loss += loss.item()
+        r_train_d += loss_d.item()
+        r_train_l += loss_l.item()
 
-        # ----------------------------------------------------
-        # Accumulate losses
-        # ----------------------------------------------------
+    scheduler.step()
 
-        running_train_loss += loss.item()
-        running_train_disease_loss += disease_loss.item()
-        running_train_lesion_loss += lesion_loss.item()
+    train_loss = r_train_loss / len(train_loader)
+    train_d_loss = r_train_d / len(train_loader)
+    train_l_loss = r_train_l / len(train_loader)
 
-
-    # --------------------------------------------------------
-    # Average training losses
-    # --------------------------------------------------------
-
-    train_loss = (
-        running_train_loss /
-        len(train_loader)
-    )
-
-    train_disease_loss = (
-        running_train_disease_loss /
-        len(train_loader)
-    )
-
-    train_lesion_loss = (
-        running_train_lesion_loss /
-        len(train_loader)
-    )
-
-
-    # ========================================================
-    # Validation
-    # ========================================================
-
+    # Validation pass (strictly validation data only, zero test set interaction)
     model.eval()
-
-    running_val_loss = 0.0
-    running_val_disease_loss = 0.0
-    running_val_lesion_loss = 0.0
-
+    r_val_loss, r_val_d, r_val_l = 0.0, 0.0, 0.0
 
     with torch.no_grad():
-
         for X, y_disease, y_lesion in val_loader:
-
             X = X.to(DEVICE)
             y_disease = y_disease.to(DEVICE)
             y_lesion = y_lesion.to(DEVICE)
 
+            disease_out, lesion_out = model(X)
 
-            # ------------------------------------------------
-            # Forward pass
-            # ------------------------------------------------
+            loss_d = criterion(disease_out, y_disease)
+            loss_l = criterion(lesion_out, y_lesion)
+            loss = DISEASE_LOSS_WEIGHT * loss_d + LESION_LOSS_WEIGHT * loss_l
 
-            disease_output, lesion_output = model(X)
+            r_val_loss += loss.item()
+            r_val_d += loss_d.item()
+            r_val_l += loss_l.item()
 
-
-            # ------------------------------------------------
-            # Individual losses
-            # ------------------------------------------------
-
-            disease_loss = criterion(
-                disease_output,
-                y_disease
-            )
-
-            lesion_loss = criterion(
-                lesion_output,
-                y_lesion
-            )
-
-
-            # ------------------------------------------------
-            # Combined loss
-            # ------------------------------------------------
-
-            loss = (
-                DISEASE_LOSS_WEIGHT * disease_loss
-                +
-                LESION_LOSS_WEIGHT * lesion_loss
-            )
-
-
-            # ------------------------------------------------
-            # Accumulate
-            # ------------------------------------------------
-
-            running_val_loss += loss.item()
-            running_val_disease_loss += disease_loss.item()
-            running_val_lesion_loss += lesion_loss.item()
-
-
-    # --------------------------------------------------------
-    # Average validation losses
-    # --------------------------------------------------------
-
-    val_loss = (
-        running_val_loss /
-        len(val_loader)
-    )
-
-    val_disease_loss = (
-        running_val_disease_loss /
-        len(val_loader)
-    )
-
-    val_lesion_loss = (
-        running_val_lesion_loss /
-        len(val_loader)
-    )
-
-
-    # ========================================================
-    # Store history
-    # ========================================================
+    val_loss = r_val_loss / len(val_loader)
+    val_d_loss = r_val_d / len(val_loader)
+    val_l_loss = r_val_l / len(val_loader)
 
     train_losses.append(train_loss)
     val_losses.append(val_loss)
+    train_disease_losses.append(train_d_loss)
+    train_lesion_losses.append(train_l_loss)
+    val_disease_losses.append(val_d_loss)
+    val_lesion_losses.append(val_l_loss)
 
-    train_disease_losses.append(
-        train_disease_loss
-    )
-
-    train_lesion_losses.append(
-        train_lesion_loss
-    )
-
-    val_disease_losses.append(
-        val_disease_loss
-    )
-
-    val_lesion_losses.append(
-        val_lesion_loss
-    )
-
-
-    # ========================================================
-    # Print epoch results
-    # ========================================================
-
-    print(
-        f"Epoch {epoch + 1}/{EPOCHS}"
-        f" | Train Loss: {train_loss:.6f}"
-        f" | Val Loss: {val_loss:.6f}"
-        f" | Disease Val: {val_disease_loss:.6f}"
-        f" | Lesion Val: {val_lesion_loss:.6f}"
-    )
-
-
-    # ========================================================
-    # Save best model
-    # ========================================================
-
+    improved = False
     if val_loss < best_val_loss:
-
         best_val_loss = val_loss
-
+        best_epoch = epoch + 1
         epochs_without_improvement = 0
-
-        torch.save(
-            model.state_dict(),
-            "checkpoints/best_multimodal_qlstm.pth"
-        )
-
-        print("  -> Best model saved")
-
+        torch.save(model.state_dict(), checkpoint_path)
+        improved = True
     else:
-
         epochs_without_improvement += 1
 
-        print(
-            f"  -> No improvement "
-            f"({epochs_without_improvement}/{PATIENCE})"
-        )
+    status_tag = "BEST SAVED" if improved else f"no imp ({epochs_without_improvement}/{PATIENCE})"
+    current_lr = scheduler.get_last_lr()[0]
 
-
-    # ========================================================
-    # Early stopping
-    # ========================================================
+    print(
+        f"Epoch {epoch+1:02d}/{EPOCHS} | "
+        f"Train: {train_loss:.6f} (D:{train_d_loss:.6f}, L:{train_l_loss:.4f}) | "
+        f"Val: {val_loss:.6f} (D:{val_d_loss:.6f}, L:{val_l_loss:.4f}) | "
+        f"LR: {current_lr:.2e} | {status_tag}"
+    )
 
     if epochs_without_improvement >= PATIENCE:
-
-        print("\nEarly stopping triggered.")
-
+        print(f"\n[Early Stopping] Triggered at epoch {epoch+1}.")
         break
 
 
 # ============================================================
-# Save training history
+# 7. Save Loss History
 # ============================================================
 
-num_epochs_completed = len(train_losses)
-
-history = pd.DataFrame({
-    "Epoch": range(
-        1,
-        num_epochs_completed + 1
-    ),
-
+history_df = pd.DataFrame({
+    "Epoch": range(1, len(train_losses) + 1),
     "Train Loss": train_losses,
-
     "Validation Loss": val_losses,
-
     "Train Disease Loss": train_disease_losses,
-
     "Train Lesion Loss": train_lesion_losses,
-
     "Validation Disease Loss": val_disease_losses,
-
     "Validation Lesion Loss": val_lesion_losses
 })
 
-
-history.to_csv(
-    "outputs/multimodal_loss_history.csv",
-    index=False
-)
-
-
-# ============================================================
-# Training finished
-# ============================================================
-
-print("\n" + "=" * 60)
-print("TRAINING FINISHED")
-print("=" * 60)
-
-print(
-    f"Epochs completed: "
-    f"{num_epochs_completed}"
-)
-
-print(
-    f"Best Validation Loss: "
-    f"{best_val_loss:.6f}"
-)
-
-print(
-    "Saved model -> "
-    "checkpoints/best_multimodal_qlstm.pth"
-)
-
-print(
-    "Saved history -> "
-    "outputs/multimodal_loss_history.csv"
-)
+history_path = "outputs/multimodal_loss_history.csv"
+history_df.to_csv(history_path, index=False)
+print(f"\nSaved training history -> {history_path}")
+print(f"Best Validation Loss: {best_val_loss:.6f} achieved at epoch {best_epoch}")
+print(f"Saved best model checkpoint -> {checkpoint_path}")
 
 
 # ============================================================
-# Load best model
+# 8. Post-Selection Test Set Evaluation
 # ============================================================
 
-print("\nLoading best model...")
+print("\n" + "=" * 70)
+print("FINAL TEST EVALUATION ON UNTOUCHED HELD-OUT LEAVES")
+print("=" * 70)
 
-model.load_state_dict(
-    torch.load(
-        "checkpoints/best_multimodal_qlstm.pth",
-        map_location=DEVICE
-    )
-)
-
+model.load_state_dict(torch.load(checkpoint_path, map_location=DEVICE))
 model.eval()
 
-
-# ============================================================
-# Test evaluation
-# ============================================================
-
-disease_predictions = []
-disease_targets = []
-
-lesion_predictions = []
-lesion_targets = []
-
+disease_preds, disease_targs = [], []
+lesion_preds, lesion_targs = [], []
 
 with torch.no_grad():
-
-    for X, y_disease, y_lesion in test_loader:
-
+    for X, y_d, y_l in test_loader:
         X = X.to(DEVICE)
+        d_out, l_out = model(X)
 
+        disease_preds.extend(d_out.cpu().numpy().flatten())
+        disease_targs.extend(y_d.numpy().flatten())
+        lesion_preds.extend(l_out.cpu().numpy().flatten())
+        lesion_targs.extend(y_l.numpy().flatten())
 
-        # ----------------------------------------------------
-        # Predictions
-        # ----------------------------------------------------
+disease_preds = np.array(disease_preds)
+disease_targs = np.array(disease_targs)
+lesion_preds = np.array(lesion_preds)
+lesion_targs = np.array(lesion_targs)
 
-        disease_output, lesion_output = model(X)
+# Reverse lesion normalization using training statistics strictly
+lesion_preds_orig = lesion_preds * lesion_std + lesion_mean
+lesion_targs_orig = lesion_targs * lesion_std + lesion_mean
 
+# Diagnostic prediction ranges
+print("\n--- PREDICTION RANGE DIAGNOSTICS ---")
+print(f"Disease Targets (Actual)   : Min = {disease_targs.min():.4f}, Max = {disease_targs.max():.4f}, Mean = {disease_targs.mean():.4f}")
+print(f"Disease Predicted          : Min = {disease_preds.min():.4f}, Max = {disease_preds.max():.4f}, Mean = {disease_preds.mean():.4f}")
+print(f"Lesion Targets (Actual px²): Min = {lesion_targs_orig.min():,.1f}, Max = {lesion_targs_orig.max():,.1f}, Mean = {lesion_targs_orig.mean():,.1f}")
+print(f"Lesion Predicted (px²)     : Min = {lesion_preds_orig.min():,.1f}, Max = {lesion_preds_orig.max():,.1f}, Mean = {lesion_preds_orig.mean():,.1f}")
 
-        # ----------------------------------------------------
-        # Disease
-        # ----------------------------------------------------
+# Normalized-scale metrics
+norm_d_mse = mean_squared_error(disease_targs, disease_preds)
+norm_l_mse = mean_squared_error(lesion_targs, lesion_preds)
+print(f"\nNormalized-Scale MSE:")
+print(f"  Disease Normalized MSE: {norm_d_mse:.6f}")
+print(f"  Lesion Normalized MSE : {norm_l_mse:.6f}")
 
-        disease_predictions.extend(
-            disease_output
-            .cpu()
-            .numpy()
-            .flatten()
-        )
+# Original-scale metrics
+d_mse = mean_squared_error(disease_targs, disease_preds)
+d_rmse = float(d_mse ** 0.5)
+d_mae = float(mean_absolute_error(disease_targs, disease_preds))
+d_r2 = float(r2_score(disease_targs, disease_preds))
 
-        disease_targets.extend(
-            y_disease
-            .numpy()
-            .flatten()
-        )
+l_mse = mean_squared_error(lesion_targs_orig, lesion_preds_orig)
+l_rmse = float(l_mse ** 0.5)
+l_mae = float(mean_absolute_error(lesion_targs_orig, lesion_preds_orig))
+l_r2 = float(r2_score(lesion_targs_orig, lesion_preds_orig))
 
-
-        # ----------------------------------------------------
-        # Lesion
-        # ----------------------------------------------------
-
-        lesion_predictions.extend(
-            lesion_output
-            .cpu()
-            .numpy()
-            .flatten()
-        )
-
-        lesion_targets.extend(
-            y_lesion
-            .numpy()
-            .flatten()
-        )
-
-
-# ============================================================
-# Convert to NumPy arrays
-# ============================================================
-
-disease_predictions = pd.Series(
-    disease_predictions
-).to_numpy()
-
-disease_targets = pd.Series(
-    disease_targets
-).to_numpy()
-
-lesion_predictions = pd.Series(
-    lesion_predictions
-).to_numpy()
-
-lesion_targets = pd.Series(
-    lesion_targets
-).to_numpy()
-
-
-# ============================================================
-# Reverse lesion normalization
-# ============================================================
-
-lesion_predictions_original = (
-    lesion_predictions * lesion_std
-    + lesion_mean
-)
-
-lesion_targets_original = (
-    lesion_targets * lesion_std
-    + lesion_mean
-)
-
-
-# ============================================================
-# Disease metrics
-# ============================================================
-
-disease_mse = mean_squared_error(
-    disease_targets,
-    disease_predictions
-)
-
-disease_rmse = (
-    disease_mse ** 0.5
-)
-
-disease_mae = mean_absolute_error(
-    disease_targets,
-    disease_predictions
-)
-
-disease_r2 = r2_score(
-    disease_targets,
-    disease_predictions
-)
-
-
-# ============================================================
-# Lesion metrics
-# ============================================================
-
-lesion_mse = mean_squared_error(
-    lesion_targets_original,
-    lesion_predictions_original
-)
-
-lesion_rmse = (
-    lesion_mse ** 0.5
-)
-
-lesion_mae = mean_absolute_error(
-    lesion_targets_original,
-    lesion_predictions_original
-)
-
-lesion_r2 = r2_score(
-    lesion_targets_original,
-    lesion_predictions_original
-)
-
-
-# ============================================================
-# Results dictionary
-# ============================================================
-
-metrics = {
-
+metrics_payload = {
     "Disease Severity": {
-
-        "MSE": float(disease_mse),
-
-        "RMSE": float(disease_rmse),
-
-        "MAE": float(disease_mae),
-
-        "R2": float(disease_r2)
+        "MSE": float(d_mse),
+        "RMSE": float(d_rmse),
+        "MAE": float(d_mae),
+        "R2": float(d_r2)
     },
-
     "Lesion Area": {
-
-        "MSE": float(lesion_mse),
-
-        "RMSE": float(lesion_rmse),
-
-        "MAE": float(lesion_mae),
-
-        "R2": float(lesion_r2)
+        "MSE": float(l_mse),
+        "RMSE": float(l_rmse),
+        "MAE": float(l_mae),
+        "R2": float(l_r2)
     }
-
 }
 
+metrics_path = "outputs/multimodal_test_metrics.json"
+with open(metrics_path, "w") as f:
+    json.dump(metrics_payload, f, indent=4)
+print(f"\nSaved test metrics -> {metrics_path}")
 
-# ============================================================
-# Save metrics
-# ============================================================
+# Export full test predictions CSV with leaf and sequence IDs
+predictions_df = pd.DataFrame({
+    "leaf_id": test_leaf_ids,
+    "sequence_id": test_idx,
+    "true_disease": disease_targs,
+    "predicted_disease": disease_preds,
+    "true_lesion_area": lesion_targs_orig,
+    "predicted_lesion_area": lesion_preds_orig
+})
 
-with open(
-    "outputs/multimodal_test_metrics.json",
-    "w"
-) as f:
+pred_path = "outputs/multimodal_predictions.csv"
+predictions_df.to_csv(pred_path, index=False)
+predictions_df.to_csv("outputs/test_predictions.csv", index=False)
+print(f"Saved prediction records -> {pred_path}")
 
-    json.dump(
-        metrics,
-        f,
-        indent=4
-    )
-
-
-# ============================================================
-# Print final results
-# ============================================================
-
-print("\n" + "=" * 60)
-print("FINAL TEST RESULTS")
-print("=" * 60)
-
-
-print("\nDisease Severity:")
-
-print(
-    f"MSE  : {disease_mse:.6f}"
-)
-
-print(
-    f"RMSE : {disease_rmse:.6f}"
-)
-
-print(
-    f"MAE  : {disease_mae:.6f}"
-)
-
-print(
-    f"R²   : {disease_r2:.6f}"
-)
-
-
-print("\nLesion Area:")
-
-print(
-    f"MSE  : {lesion_mse:.6f}"
-)
-
-print(
-    f"RMSE : {lesion_rmse:.6f}"
-)
-
-print(
-    f"MAE  : {lesion_mae:.6f}"
-)
-
-print(
-    f"R²   : {lesion_r2:.6f}"
-)
-
-
-print(
-    "\nSaved -> "
-    "outputs/multimodal_test_metrics.json"
-)
+print("\n" + "=" * 70)
+print("FINAL TEST METRICS SUMMARY (ORIGINAL SCALES)")
+print("=" * 70)
+print(f"Disease Severity: MSE = {d_mse:.6f} | RMSE = {d_rmse:.6f} | MAE = {d_mae:.6f} | R² = {d_r2:.6f}")
+print(f"Lesion Area     : MSE = {l_mse:,.1f} | RMSE = {l_rmse:,.2f} | MAE = {l_mae:,.2f} | R² = {l_r2:.6f}")
+print("=" * 70)

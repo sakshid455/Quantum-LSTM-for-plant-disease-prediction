@@ -42,7 +42,8 @@ class MultimodalTemporalDataset(Dataset):
 
 def create_multimodal_loaders(
     batch_size=8,
-    random_state=42
+    random_state=42,
+    modality="multimodal",
 ):
 
     # ========================================================
@@ -59,11 +60,20 @@ def create_multimodal_loaders(
     y_lesion = data["y_lesion_area"]
     leaf_ids = data["leaf_ids"]
 
+    if modality == "vit":
+        X = X[:, :, :768]
+    elif modality == "metadata":
+        X = X[:, :, 768:]
+    elif modality == "multimodal":
+        X = X[:, :, :]
+    else:
+        raise ValueError(f"Unknown modality: {modality}. Choose from ['multimodal', 'vit', 'metadata']")
+
     print("=" * 60)
-    print("LEAKAGE-FREE MULTIMODAL DATA SPLIT")
+    print(f"LEAKAGE-FREE {modality.upper()} DATA SPLIT")
     print("=" * 60)
 
-    print("Original X shape:", X.shape)
+    print(f"Input X shape ({modality}):", X.shape)
     print("Disease target shape:", y_disease.shape)
     print("Lesion target shape:", y_lesion.shape)
 

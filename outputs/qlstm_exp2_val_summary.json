@@ -1,0 +1,12 @@
+{
+    "exp_id": 2,
+    "name": "Exp 2: Loss-Balanced Multi-Task (Disease 10x) + Cosine Annealing",
+    "parameters": 13986,
+    "best_epoch": 49,
+    "epochs_completed": 50,
+    "best_val_loss": 0.047912657571335636,
+    "val_disease_mse": 0.00216682729695751,
+    "val_disease_mae": 0.03614865602138044,
+    "val_lesion_mse": 7851020288.0,
+    "val_lesion_mae": 83783.5625
+}

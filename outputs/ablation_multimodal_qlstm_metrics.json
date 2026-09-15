@@ -1,0 +1,20 @@
+{
+    "modality": "multimodal",
+    "input_features": 791,
+    "parameters": 15010,
+    "best_validation_epoch": 39,
+    "best_validation_loss": 0.01908615045249462,
+    "epochs_completed": 49,
+    "Disease Severity": {
+        "MSE": 0.0010842988267540932,
+        "RMSE": 0.032928693061737103,
+        "MAE": 0.025093263015151024,
+        "R2": 0.8400741815567017
+    },
+    "Lesion Area": {
+        "MSE": 12506698752.0,
+        "RMSE": 111833.35259214936,
+        "MAE": 80246.7265625,
+        "R2": 0.6366246342658997
+    }
+}

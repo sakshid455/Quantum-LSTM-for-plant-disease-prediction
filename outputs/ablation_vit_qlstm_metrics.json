@@ -1,0 +1,20 @@
+{
+    "modality": "vit",
+    "input_features": 768,
+    "parameters": 14642,
+    "best_validation_epoch": 23,
+    "best_validation_loss": 0.07979588148494561,
+    "epochs_completed": 33,
+    "Disease Severity": {
+        "MSE": 0.006743144243955612,
+        "RMSE": 0.08211665022366421,
+        "MAE": 0.059324994683265686,
+        "R2": 0.0054375529289245605
+    },
+    "Lesion Area": {
+        "MSE": 35959939072.0,
+        "RMSE": 189631.0604094171,
+        "MAE": 158299.390625,
+        "R2": -0.04479658603668213
+    }
+}

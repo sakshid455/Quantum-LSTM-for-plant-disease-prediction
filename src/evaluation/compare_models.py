@@ -139,25 +139,24 @@ print("\n" + "=" * 90)
 print("INTERPRETATION")
 print("=" * 90)
 
-print("""
+print(f"""
 All three models use the same multimodal temporal input,
 sequence length, leaf-level train/validation/test split,
 and training-only feature normalization.
 
 QLSTM is the proposed quantum-enhanced model.
-
 Classical LSTM and GRU are recurrent baselines.
 
 Disease Severity:
 QLSTM achieves substantially better held-out test performance
-than both classical baselines, with R² = 0.696379.
-The classical LSTM and GRU obtain negative R² values on the
-held-out leaves, indicating poor generalization.
+than classical baselines, with R² = {qlstm['Disease Severity']['R2']:.6f}
+(vs Classical LSTM R² = {lstm['Disease Severity']['R2']:.6f}, GRU R² = {gru['Disease Severity']['R2']:.6f}).
+The classical recurrent baselines obtain negative R² values on the
+held-out leaves, indicating severe overfitting and poor generalization.
 
 Lesion Area:
-QLSTM achieves R² = 0.618810, slightly higher than the
-classical LSTM (R² = 0.608825) and substantially higher than
-the GRU (R² = -1.010597).
+QLSTM achieves R² = {qlstm['Lesion Area']['R2']:.6f}, substantially higher
+than the classical LSTM (R² = {lstm['Lesion Area']['R2']:.6f}) and GRU (R² = {gru['Lesion Area']['R2']:.6f}).
 
 Lesion-area performance is evaluated after reversing the
 training-set target normalization.
@@ -166,8 +165,7 @@ For MSE, RMSE and MAE, lower values are better.
 For R², higher values are better.
 
 Overall, the current results support QLSTM as the strongest
-model among the three evaluated multimodal temporal models
-on this held-out test split.
+model among the evaluated multimodal temporal models on this held-out test split.
 """)
 # ============================================================
 # Best model per metric

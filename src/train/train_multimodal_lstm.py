@@ -29,6 +29,11 @@ EPOCHS = 30
 LEARNING_RATE = 1e-4
 BATCH_SIZE = 8
 
+DISEASE_LOSS_WEIGHT = 1.0
+LESION_LOSS_WEIGHT = 0.5
+MAX_GRAD_NORM = 1.0
+PATIENCE = 5
+
 os.makedirs("checkpoints", exist_ok=True)
 os.makedirs("outputs", exist_ok=True)
 
@@ -93,7 +98,14 @@ optimizer = torch.optim.Adam(
 train_losses = []
 val_losses = []
 
+train_disease_losses = []
+train_lesion_losses = []
+
+val_disease_losses = []
+val_lesion_losses = []
+
 best_val_loss = float("inf")
+epochs_without_improvement = 0
 
 
 # ============================================================
@@ -105,6 +117,8 @@ for epoch in range(EPOCHS):
     model.train()
 
     running_train_loss = 0.0
+    running_train_disease_loss = 0.0
+    running_train_lesion_loss = 0.0
 
     for X, y_disease, y_lesion in train_loader:
 
@@ -127,21 +141,37 @@ for epoch in range(EPOCHS):
         )
 
         # Same weighting as QLSTM
-        loss = disease_loss + 0.5 * lesion_loss
+        loss = (
+            DISEASE_LOSS_WEIGHT * disease_loss
+            +
+            LESION_LOSS_WEIGHT * lesion_loss
+        )
 
         loss.backward()
 
         torch.nn.utils.clip_grad_norm_(
             model.parameters(),
-            max_norm=1.0
+            max_norm=MAX_GRAD_NORM
         )
 
         optimizer.step()
 
         running_train_loss += loss.item()
+        running_train_disease_loss += disease_loss.item()
+        running_train_lesion_loss += lesion_loss.item()
 
     train_loss = (
         running_train_loss /
+        len(train_loader)
+    )
+
+    train_disease_loss = (
+        running_train_disease_loss /
+        len(train_loader)
+    )
+
+    train_lesion_loss = (
+        running_train_lesion_loss /
         len(train_loader)
     )
 
@@ -176,7 +206,11 @@ for epoch in range(EPOCHS):
                 y_lesion
             )
 
-            loss = disease_loss + 0.5 * lesion_loss
+            loss = (
+                DISEASE_LOSS_WEIGHT * disease_loss
+                +
+                LESION_LOSS_WEIGHT * lesion_loss
+            )
 
             running_val_loss += loss.item()
             running_val_disease_loss += disease_loss.item()
@@ -205,6 +239,12 @@ for epoch in range(EPOCHS):
     train_losses.append(train_loss)
     val_losses.append(val_loss)
 
+    train_disease_losses.append(train_disease_loss)
+    train_lesion_losses.append(train_lesion_loss)
+
+    val_disease_losses.append(val_disease_loss)
+    val_lesion_losses.append(val_lesion_loss)
+
 
     print(
         f"Epoch {epoch + 1}/{EPOCHS}"
@@ -222,6 +262,7 @@ for epoch in range(EPOCHS):
     if val_loss < best_val_loss:
 
         best_val_loss = val_loss
+        epochs_without_improvement = 0
 
         torch.save(
             model.state_dict(),
@@ -230,15 +271,41 @@ for epoch in range(EPOCHS):
 
         print("  -> Best model saved")
 
+    else:
+
+        epochs_without_improvement += 1
+
+        print(
+            f"  -> No improvement "
+            f"({epochs_without_improvement}/{PATIENCE})"
+        )
+
+
+    # ========================================================
+    # Early stopping
+    # ========================================================
+
+    if epochs_without_improvement >= PATIENCE:
+
+        print("\nEarly stopping triggered.")
+
+        break
+
 
 # ============================================================
 # Save history
 # ============================================================
 
+num_epochs_completed = len(train_losses)
+
 history = pd.DataFrame({
-    "Epoch": range(1, EPOCHS + 1),
+    "Epoch": range(1, num_epochs_completed + 1),
     "Train Loss": train_losses,
-    "Validation Loss": val_losses
+    "Validation Loss": val_losses,
+    "Train Disease Loss": train_disease_losses,
+    "Train Lesion Loss": train_lesion_losses,
+    "Validation Disease Loss": val_disease_losses,
+    "Validation Lesion Loss": val_lesion_losses
 })
 
 history.to_csv(
@@ -347,6 +414,23 @@ lesion_predictions_original = (
 lesion_targets_original = (
     lesion_targets * lesion_std
     + lesion_mean
+)
+
+
+# ============================================================
+# Save test predictions
+# ============================================================
+
+predictions_df = pd.DataFrame({
+    "actual_disease": disease_targets,
+    "predicted_disease": disease_predictions,
+    "actual_lesion": lesion_targets_original,
+    "predicted_lesion": lesion_predictions_original
+})
+
+predictions_df.to_csv(
+    "outputs/multimodal_lstm_predictions.csv",
+    index=False
 )
 
 

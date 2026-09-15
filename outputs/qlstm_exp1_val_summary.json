@@ -1,0 +1,12 @@
+{
+    "exp_id": 1,
+    "name": "Exp 1: Extended Horizon (50 ep) + Cosine Annealing + Baseline Loss Weights",
+    "parameters": 13986,
+    "best_epoch": 49,
+    "epochs_completed": 50,
+    "best_val_loss": 0.06588166827956836,
+    "val_disease_mse": 0.003632583622800649,
+    "val_disease_mae": 0.051728036686696705,
+    "val_lesion_mse": 18522437632.0,
+    "val_lesion_mae": 128810.5078125
+}

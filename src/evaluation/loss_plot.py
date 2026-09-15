@@ -4,7 +4,11 @@ import matplotlib.pyplot as plt
 
 os.makedirs("outputs", exist_ok=True)
 
-INPUT_PATH = "outputs/multimodal_loss_history.csv"
+if os.path.exists("outputs/multimodal_loss_history.csv"):
+    INPUT_PATH = "outputs/multimodal_loss_history.csv"
+else:
+    INPUT_PATH = "outputs/qlstm_exp3_loss_history.csv"
+
 OUTPUT_PATH = "outputs/qlstm_multimodal_loss_curve.png"
 
 df = pd.read_csv(INPUT_PATH)
