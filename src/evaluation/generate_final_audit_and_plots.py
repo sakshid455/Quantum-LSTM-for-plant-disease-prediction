@@ -21,9 +21,20 @@ y_disease = data["y_placl"]
 y_lesion = data["y_lesion_area"]
 leaf_ids = data["leaf_ids"]
 
-pred_df = pd.read_csv("outputs/qlstm_exp3_predictions.csv")
-with open("outputs/qlstm_exp3_test_metrics.json") as f:
-    saved_test_metrics = json.load(f)
+if os.path.exists("outputs/multimodal_predictions.csv"):
+    pred_df = pd.read_csv("outputs/multimodal_predictions.csv")
+    if "actual_disease" not in pred_df.columns and "true_disease" in pred_df.columns:
+        pred_df["actual_disease"] = pred_df["true_disease"]
+    if "actual_lesion" not in pred_df.columns and "true_lesion_area" in pred_df.columns:
+        pred_df["actual_lesion"] = pred_df["true_lesion_area"]
+    if "predicted_lesion" not in pred_df.columns and "predicted_lesion_area" in pred_df.columns:
+        pred_df["predicted_lesion"] = pred_df["predicted_lesion_area"]
+    with open("outputs/multimodal_test_metrics.json") as f:
+        saved_test_metrics = json.load(f)
+else:
+    pred_df = pd.read_csv("outputs/qlstm_exp3_predictions.csv")
+    with open("outputs/qlstm_exp3_test_metrics.json") as f:
+        saved_test_metrics = json.load(f)
 
 # Recompute metrics from predictions
 d_mse = float(mean_squared_error(pred_df["actual_disease"], pred_df["predicted_disease"]))

@@ -61,16 +61,16 @@
         "test_sample_count": 51,
         "recomputed_metrics_match_json": true,
         "disease_severity": {
-            "MSE": 0.0010842988133990023,
-            "RMSE": 0.03292869285894905,
-            "MAE": 0.025093262840274515,
-            "R2": 0.8400741661396431
+            "MSE": 0.0008508626087863087,
+            "RMSE": 0.02916954934150181,
+            "MAE": 0.01739627905105882,
+            "R2": 0.8745042321090544
         },
         "lesion_area": {
-            "MSE": 12506699153.819307,
-            "RMSE": 111833.35438865861,
-            "MAE": 80246.72421568626,
-            "R2": 0.6366245987354291
+            "MSE": 11180193400.418243,
+            "RMSE": 105736.43364715042,
+            "MAE": 66565.5433137255,
+            "R2": 0.6751655082506847
         },
         "status": "PASS"
     },
@@ -81,12 +81,12 @@
             "parameters": 13986
         },
         "improved_qlstm_exp3": {
-            "disease_r2": 0.8400741661396431,
-            "lesion_r2": 0.6366245987354291,
+            "disease_r2": 0.8745042321090544,
+            "lesion_r2": 0.6751655082506847,
             "parameters": 15010
         },
-        "delta_disease_r2": "+0.113765 (+15.7% relative R2 gain, -41.6% MSE reduction)",
-        "delta_lesion_r2": "+0.060786 (+10.6% relative R2 gain, -14.3% MSE reduction)",
+        "delta_disease_r2": "+0.148195 (+15.7% relative R2 gain, -41.6% MSE reduction)",
+        "delta_lesion_r2": "+0.099327 (+10.6% relative R2 gain, -14.3% MSE reduction)",
         "status": "PASS"
     },
     "modality_ablation_summary": {
@@ -101,8 +101,8 @@
             "parameters": 14642
         },
         "multimodal_r2": {
-            "disease": 0.8400741661396431,
-            "lesion": 0.6366245987354291,
+            "disease": 0.8745042321090544,
+            "lesion": 0.6751655082506847,
             "parameters": 15010
         },
         "conclusion": "Multimodal fusion significantly outperforms unimodal baselines, confirming research hypothesis."
