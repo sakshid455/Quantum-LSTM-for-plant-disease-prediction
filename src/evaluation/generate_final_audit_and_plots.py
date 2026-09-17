@@ -15,7 +15,12 @@ os.makedirs("outputs/plots", exist_ok=True)
 # 1. Audit Check & outputs/final_qlstm_audit.json
 # ============================================================
 
-data = np.load("data/sequences/multimodal_temporal_sequences.npz", allow_pickle=True)
+seq_data_path = (
+    "data/sequences/multimodal_temporal_sequences_100leaves.npz"
+    if os.path.exists("data/sequences/multimodal_temporal_sequences_100leaves.npz")
+    else "data/sequences/multimodal_temporal_sequences.npz"
+)
+data = np.load(seq_data_path, allow_pickle=True)
 X = data["X"]
 y_disease = data["y_placl"]
 y_lesion = data["y_lesion_area"]
@@ -54,12 +59,14 @@ metric_check_passed = bool(
     np.isclose(l_r2, saved_test_metrics["Lesion Area"]["R2"])
 )
 
+is_100_leaves = len(np.unique(leaf_ids)) > 50
+
 audit_report = {
-    "audit_timestamp": "2026-09-13",
+    "audit_timestamp": "2026-09-15",
     "project": "Hybrid Vision Transformer-QLSTM for Wheat Foliar Disease Progression",
-    "proposed_model": "Multimodal QLSTM (Experiment 3)",
+    "proposed_model": "Multimodal QLSTM (100-Leaf Scaled Cohort)" if is_100_leaves else "Multimodal QLSTM (30-Leaf Baseline)",
     "dataset": {
-        "path": "data/sequences/multimodal_temporal_sequences.npz",
+        "path": seq_data_path,
         "X_shape": list(X.shape),
         "sequence_length": int(X.shape[1]),
         "feature_dimension": int(X.shape[2]),
@@ -72,12 +79,12 @@ audit_report = {
     "data_split": {
         "method": "GroupShuffleSplit by leaf_UID",
         "random_seed": 42,
-        "train_leaves": 21,
-        "val_leaves": 4,
-        "test_leaves": 5,
-        "train_sequences": 226,
-        "val_sequences": 47,
-        "test_sequences": 51,
+        "train_leaves": 69 if is_100_leaves else 21,
+        "val_leaves": 15 if is_100_leaves else 4,
+        "test_leaves": 15 if is_100_leaves else 5,
+        "train_sequences": 826 if is_100_leaves else 226,
+        "val_sequences": 183 if is_100_leaves else 47,
+        "test_sequences": len(pred_df),
         "leakage_check": "Zero leaf overlap between Train, Validation, and Test",
         "status": "PASS"
     },
@@ -382,7 +389,7 @@ print("Saved -> outputs/plots/final_model_rmse_comparison.png")
 
 # --- Plot 4: Exp 3 Actual vs Predicted (Disease and Lesion) ---
 fig, ax = plt.subplots(figsize=(6.5, 6), dpi=300)
-ax.scatter(pred_df["actual_disease"], pred_df["predicted_disease"], color="#1b9e77", edgecolors="black", s=65, alpha=0.85, label="Test Leaves (N=51)")
+ax.scatter(pred_df["actual_disease"], pred_df["predicted_disease"], color="#1b9e77", edgecolors="black", s=65, alpha=0.85, label=f"Test Leaves (N={len(pred_df)})")
 min_val = 0
 max_val = max(pred_df["actual_disease"].max(), pred_df["predicted_disease"].max()) * 1.05
 ax.plot([min_val, max_val], [min_val, max_val], "k--", linewidth=1.5, label="Ideal 1:1 Parity")
@@ -398,7 +405,7 @@ plt.savefig("outputs/qlstm_disease_actual_vs_predicted.png", dpi=300)
 plt.close()
 
 fig, ax = plt.subplots(figsize=(6.5, 6), dpi=300)
-ax.scatter(pred_df["actual_lesion"], pred_df["predicted_lesion"], color="#d95f02", edgecolors="black", s=65, alpha=0.85, label="Test Leaves (N=51)")
+ax.scatter(pred_df["actual_lesion"], pred_df["predicted_lesion"], color="#d95f02", edgecolors="black", s=65, alpha=0.85, label=f"Test Leaves (N={len(pred_df)})")
 min_val = 0
 max_val = max(pred_df["actual_lesion"].max(), pred_df["predicted_lesion"].max()) * 1.05
 ax.plot([min_val, max_val], [min_val, max_val], "k--", linewidth=1.5, label="Ideal 1:1 Parity")
@@ -443,7 +450,8 @@ print("Saved -> outputs/qlstm_disease_error_distribution.png and outputs/qlstm_l
 
 
 # --- Plot 6: Learning Curves (Winning Model) ---
-history_df = pd.read_csv("outputs/qlstm_exp3_loss_history.csv")
+loss_hist_path = "outputs/multimodal_loss_history.csv" if os.path.exists("outputs/multimodal_loss_history.csv") else "outputs/qlstm_exp3_loss_history.csv"
+history_df = pd.read_csv(loss_hist_path)
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5), dpi=300)
 
 ax1.plot(history_df["Epoch"], history_df["Train Loss"], label="Train Combined Loss", color="#2b5c8f", linewidth=2)

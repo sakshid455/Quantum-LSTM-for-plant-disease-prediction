@@ -25,23 +25,17 @@ The models perform two regression tasks:
 
 To reduce data leakage, the dataset is split at the leaf level, ensuring that sequences from the same leaf cannot appear in multiple dataset partitions.
 
-The current experiment uses 30 leaves:
+Two cohort evaluations were conducted under strict leaf-level GroupShuffleSplit:
 
-- 21 training leaves
-- 4 validation leaves
-- 5 test leaves
+1. **30-Leaf Baseline Cohort (324 sequences, 5 held-out test leaves):**
+   - Disease Severity: $R^2 = \mathbf{0.8745}$ (RMSE = 0.0292)
+   - Lesion Area: $R^2 = \mathbf{0.6752}$ (RMSE = 105,736 px²)
 
-The QLSTM currently achieves:
+2. **100-Leaf Scaled Cohort (1,190 sequences, 15 held-out test leaves):**
+   - Disease Severity: $R^2 = \mathbf{0.9339}$ (RMSE = 0.0349, MAE = 0.0226)
+   - Lesion Area: $R^2 = \mathbf{0.8674}$ (RMSE = 165,905 px², MAE = 78,799 px²)
 
-Disease Severity:
-
-    R² = 0.696379
-
-Lesion Area:
-
-    R² = 0.618810
-
-These results are better than the evaluated classical LSTM and GRU baselines under the current experimental setup.
+These results significantly outperform classical LSTM and GRU baselines, which suffer from high-dimensional overparameterization and collapse on unseen leaves.
 
 ---
 

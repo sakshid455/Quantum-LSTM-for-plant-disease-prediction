@@ -1,5 +1,6 @@
 import os
 import json
+import argparse
 import numpy as np
 import pandas as pd
 import torch
@@ -15,8 +16,22 @@ from src.dataset.multimodal_dataloader import create_multimodal_loaders
 
 
 # ============================================================
-# 1. Reproducibility Seed & Device Setup
+# 1. Argument Parsing & Reproducibility Setup
 # ============================================================
+
+parser = argparse.ArgumentParser(description="Multimodal QLSTM Training Pipeline")
+parser.add_argument("--data_path", type=str, default="data/sequences/multimodal_temporal_sequences_100leaves.npz", help="Path to sequence dataset (.npz)")
+parser.add_argument("--checkpoint_path", type=str, default="checkpoints/best_multimodal_qlstm.pth", help="Path to save best model checkpoint")
+parser.add_argument("--history_path", type=str, default="outputs/multimodal_loss_history.csv", help="Path to save loss history CSV")
+parser.add_argument("--metrics_path", type=str, default="outputs/multimodal_test_metrics.json", help="Path to save test metrics JSON")
+parser.add_argument("--predictions_path", type=str, default="outputs/multimodal_predictions.csv", help="Path to save test predictions CSV")
+parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
+parser.add_argument("--batch_size", type=int, default=8, help="Batch size")
+parser.add_argument("--learning_rate", type=float, default=1e-4, help="Learning rate")
+parser.add_argument("--hidden_size", type=int, default=32, help="QLSTM hidden state dimension")
+parser.add_argument("--patience", type=int, default=10, help="Early stopping patience")
+args = parser.parse_args()
+
 
 def set_seed(seed=42):
     torch.manual_seed(seed)
@@ -33,9 +48,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # 2. Hyperparameter Configuration
 # ============================================================
 
-EPOCHS = 50
-LEARNING_RATE = 1e-4
-BATCH_SIZE = 8
+EPOCHS = args.epochs
+LEARNING_RATE = args.learning_rate
+BATCH_SIZE = args.batch_size
+HIDDEN_SIZE = args.hidden_size
+PATIENCE = args.patience
 
 # Balanced multi-task loss weights:
 # Normalized disease MSE is ~0.001-0.002, normalized lesion MSE is ~0.05-0.10.
@@ -44,16 +61,18 @@ DISEASE_LOSS_WEIGHT = 10.0
 LESION_LOSS_WEIGHT = 0.5
 
 MAX_GRAD_NORM = 1.0
-PATIENCE = 10
-HIDDEN_SIZE = 32
 USE_MLP_HEADS = True  # Specialized 2-layer MLP projection heads
 
-os.makedirs("checkpoints", exist_ok=True)
-os.makedirs("outputs", exist_ok=True)
+os.makedirs(os.path.dirname(args.checkpoint_path) or ".", exist_ok=True)
+os.makedirs(os.path.dirname(args.history_path) or ".", exist_ok=True)
+os.makedirs(os.path.dirname(args.metrics_path) or ".", exist_ok=True)
+os.makedirs(os.path.dirname(args.predictions_path) or ".", exist_ok=True)
 
 print("=" * 70)
 print("MULTIMODAL QLSTM TRAINING PIPELINE (CORRECTED & DIAGNOSTIC)")
 print("=" * 70)
+print(f"Dataset Path: {args.data_path}")
+print(f"Checkpoint Path: {args.checkpoint_path}")
 print(f"Device: {DEVICE}")
 print(f"Epochs: {EPOCHS} | Batch Size: {BATCH_SIZE} | Learning Rate: {LEARNING_RATE}")
 print(f"Loss Weights: Disease = {DISEASE_LOSS_WEIGHT} | Lesion = {LESION_LOSS_WEIGHT}")
@@ -72,13 +91,14 @@ print(f"Early Stopping Patience: {PATIENCE} | Max Grad Norm: {MAX_GRAD_NORM}")
     lesion_mean,
     lesion_std
 ) = create_multimodal_loaders(
+    data_path=args.data_path,
     batch_size=BATCH_SIZE,
     random_state=42,
     modality="multimodal"
 )
 
 # Extract test split metadata (leaf IDs and sequence indices) for predictions export
-raw_data = np.load("data/sequences/multimodal_temporal_sequences.npz", allow_pickle=True)
+raw_data = np.load(args.data_path, allow_pickle=True)
 X_raw = raw_data["X"]
 y_disease_raw = raw_data["y_placl"]
 y_lesion_raw = raw_data["y_lesion_area"]
@@ -95,13 +115,17 @@ test_leaf_ids = leaf_ids_raw[test_idx]
 
 # Diagnostic statistics printing
 sample_batch_x, sample_batch_yd, sample_batch_yl = next(iter(train_loader))
-vit_slice = sample_batch_x[:, :, :768]
-meta_slice = sample_batch_x[:, :, 768:]
+input_dim = sample_batch_x.shape[-1]
+vit_slice = sample_batch_x[:, :, :min(768, input_dim)]
+meta_slice = sample_batch_x[:, :, 768:] if input_dim > 768 else None
 
 print("\n--- DATASET & FEATURE DIAGNOSTICS ---")
-print(f"Multimodal X shape per sequence: {sample_batch_x.shape[1:]} (4 steps, 791 features)")
-print(f"  ViT features (0-767)      : Normalized mean={vit_slice.mean():.4f}, std={vit_slice.std():.4f}, min={vit_slice.min():.4f}, max={vit_slice.max():.4f}")
-print(f"  Metadata features (768-790): Normalized mean={meta_slice.mean():.4f}, std={meta_slice.std():.4f}, min={meta_slice.min():.4f}, max={meta_slice.max():.4f}")
+print(f"X shape per sequence: {sample_batch_x.shape[1:]} (4 steps, {input_dim} features)")
+print(f"  ViT features (0-{min(767, input_dim - 1)})      : Normalized mean={vit_slice.mean():.4f}, std={vit_slice.std():.4f}, min={vit_slice.min():.4f}, max={vit_slice.max():.4f}")
+if meta_slice is not None and meta_slice.shape[-1] > 0:
+    print(f"  Metadata features (768-{input_dim - 1}): Normalized mean={meta_slice.mean():.4f}, std={meta_slice.std():.4f}, min={meta_slice.min():.4f}, max={meta_slice.max():.4f}")
+else:
+    print(f"  Metadata features: None (Image-only mode, 0 exogenous features)")
 print(f"Lesion Target Normalization Parameters (Train-Only):")
 print(f"  Mean = {lesion_mean:,.2f} px² | Std = {lesion_std:,.2f} px²")
 print(f"Disease Target Statistics (Original [0, 1] Scale):")
@@ -114,14 +138,14 @@ print(f"Test Set: {len(test_idx)} sequences across {len(np.unique(test_leaf_ids)
 # ============================================================
 
 model = QLSTMModel(
-    input_size=791,
+    input_size=input_dim,
     hidden_size=HIDDEN_SIZE,
     mlp_heads=USE_MLP_HEADS,
     dropout=0.1
 ).to(DEVICE)
 
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-print(f"\nTrainable Model Parameters: {total_params:,}")
+print(f"\nTrainable Model Parameters: {total_params:,} (Input size: {input_dim})")
 
 
 # ============================================================
@@ -146,7 +170,7 @@ best_val_loss = float("inf")
 best_epoch = 0
 epochs_without_improvement = 0
 
-checkpoint_path = "checkpoints/best_multimodal_qlstm.pth"
+checkpoint_path = args.checkpoint_path
 
 
 # ============================================================
@@ -259,7 +283,7 @@ history_df = pd.DataFrame({
     "Validation Lesion Loss": val_lesion_losses
 })
 
-history_path = "outputs/multimodal_loss_history.csv"
+history_path = args.history_path
 history_df.to_csv(history_path, index=False)
 print(f"\nSaved training history -> {history_path}")
 print(f"Best Validation Loss: {best_val_loss:.6f} achieved at epoch {best_epoch}")
@@ -339,7 +363,7 @@ metrics_payload = {
     }
 }
 
-metrics_path = "outputs/multimodal_test_metrics.json"
+metrics_path = args.metrics_path
 with open(metrics_path, "w") as f:
     json.dump(metrics_payload, f, indent=4)
 print(f"\nSaved test metrics -> {metrics_path}")
@@ -354,9 +378,10 @@ predictions_df = pd.DataFrame({
     "predicted_lesion_area": lesion_preds_orig
 })
 
-pred_path = "outputs/multimodal_predictions.csv"
+pred_path = args.predictions_path
 predictions_df.to_csv(pred_path, index=False)
-predictions_df.to_csv("outputs/test_predictions.csv", index=False)
+if pred_path == "outputs/multimodal_predictions.csv":
+    predictions_df.to_csv("outputs/test_predictions.csv", index=False)
 print(f"Saved prediction records -> {pred_path}")
 
 print("\n" + "=" * 70)

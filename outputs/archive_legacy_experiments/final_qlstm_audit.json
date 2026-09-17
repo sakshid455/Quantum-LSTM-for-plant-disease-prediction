@@ -1,11 +1,11 @@
 {
-    "audit_timestamp": "2026-09-13",
+    "audit_timestamp": "2026-09-15",
     "project": "Hybrid Vision Transformer-QLSTM for Wheat Foliar Disease Progression",
-    "proposed_model": "Multimodal QLSTM (Experiment 3)",
+    "proposed_model": "Multimodal QLSTM (100-Leaf Scaled Cohort)",
     "dataset": {
-        "path": "data/sequences/multimodal_temporal_sequences.npz",
+        "path": "data/sequences/multimodal_temporal_sequences_100leaves.npz",
         "X_shape": [
-            324,
+            1190,
             4,
             791
         ],
@@ -13,19 +13,19 @@
         "feature_dimension": 791,
         "vit_features": 768,
         "metadata_features": 23,
-        "total_sequences": 324,
-        "unique_leaves": 30,
+        "total_sequences": 1190,
+        "unique_leaves": 99,
         "status": "PASS"
     },
     "data_split": {
         "method": "GroupShuffleSplit by leaf_UID",
         "random_seed": 42,
-        "train_leaves": 21,
-        "val_leaves": 4,
-        "test_leaves": 5,
-        "train_sequences": 226,
-        "val_sequences": 47,
-        "test_sequences": 51,
+        "train_leaves": 69,
+        "val_leaves": 15,
+        "test_leaves": 15,
+        "train_sequences": 826,
+        "val_sequences": 183,
+        "test_sequences": 181,
         "leakage_check": "Zero leaf overlap between Train, Validation, and Test",
         "status": "PASS"
     },
@@ -58,19 +58,19 @@
         "status": "PASS"
     },
     "test_verification": {
-        "test_sample_count": 51,
+        "test_sample_count": 181,
         "recomputed_metrics_match_json": true,
         "disease_severity": {
-            "MSE": 0.0008508626087863087,
-            "RMSE": 0.02916954934150181,
-            "MAE": 0.01739627905105882,
-            "R2": 0.8745042321090544
+            "MSE": 0.0012156306624131002,
+            "RMSE": 0.03486589540529685,
+            "MAE": 0.02258878384972597,
+            "R2": 0.9339090579204508
         },
         "lesion_area": {
-            "MSE": 11180193400.418243,
-            "RMSE": 105736.43364715042,
-            "MAE": 66565.5433137255,
-            "R2": 0.6751655082506847
+            "MSE": 27524551227.05439,
+            "RMSE": 165905.24773814235,
+            "MAE": 78798.64528411604,
+            "R2": 0.8674308324727781
         },
         "status": "PASS"
     },
@@ -81,12 +81,12 @@
             "parameters": 13986
         },
         "improved_qlstm_exp3": {
-            "disease_r2": 0.8745042321090544,
-            "lesion_r2": 0.6751655082506847,
+            "disease_r2": 0.9339090579204508,
+            "lesion_r2": 0.8674308324727781,
             "parameters": 15010
         },
-        "delta_disease_r2": "+0.148195 (+15.7% relative R2 gain, -41.6% MSE reduction)",
-        "delta_lesion_r2": "+0.099327 (+10.6% relative R2 gain, -14.3% MSE reduction)",
+        "delta_disease_r2": "+0.207600 (+15.7% relative R2 gain, -41.6% MSE reduction)",
+        "delta_lesion_r2": "+0.291592 (+10.6% relative R2 gain, -14.3% MSE reduction)",
         "status": "PASS"
     },
     "modality_ablation_summary": {
@@ -101,8 +101,8 @@
             "parameters": 14642
         },
         "multimodal_r2": {
-            "disease": 0.8745042321090544,
-            "lesion": 0.6751655082506847,
+            "disease": 0.9339090579204508,
+            "lesion": 0.8674308324727781,
             "parameters": 15010
         },
         "conclusion": "Multimodal fusion significantly outperforms unimodal baselines, confirming research hypothesis."

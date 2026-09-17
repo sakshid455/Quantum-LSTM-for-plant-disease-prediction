@@ -6,7 +6,7 @@ from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 
 
-DATA_PATH = "data/sequences/multimodal_temporal_sequences.npz"
+DATA_PATH = "data/sequences/multimodal_temporal_sequences_100leaves.npz"
 
 
 class MultimodalTemporalDataset(Dataset):
@@ -44,6 +44,7 @@ def create_multimodal_loaders(
     batch_size=8,
     random_state=42,
     modality="multimodal",
+    data_path=DATA_PATH,
 ):
 
     # ========================================================
@@ -51,7 +52,7 @@ def create_multimodal_loaders(
     # ========================================================
 
     data = np.load(
-        DATA_PATH,
+        data_path,
         allow_pickle=True
     )
 
