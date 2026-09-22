@@ -17,6 +17,7 @@ from src.quantum.qlstm_model import QLSTMModel
 
 
 DATA_PATH = "data/sequences/multimodal_temporal_sequences.npz"
+DATA_PATH_100LEAVES = "data/sequences/multimodal_temporal_sequences_100leaves.npz"
 
 
 class TemporalSequenceDataset(Dataset):
@@ -39,8 +40,8 @@ def set_seed(seed=42):
         torch.cuda.manual_seed_all(seed)
 
 
-def create_ablation_loaders(modality="multimodal", batch_size=8, random_state=42):
-    data = np.load(DATA_PATH, allow_pickle=True)
+def create_ablation_loaders(modality="multimodal", batch_size=8, random_state=42, data_path=DATA_PATH):
+    data = np.load(data_path, allow_pickle=True)
     X_full = data["X"]
     y_disease = data["y_placl"]
     y_lesion = data["y_lesion_area"]
@@ -147,14 +148,16 @@ CONFIG = {
 }
 
 
-def train_ablation_model(modality):
+def train_ablation_model(modality, data_path=DATA_PATH, tag=None):
+    run_name = modality if tag is None else f"{modality}_{tag}"
+
     set_seed(42)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs("checkpoints", exist_ok=True)
     os.makedirs("outputs", exist_ok=True)
 
     print("\n" + "=" * 70)
-    print(f"ABLATION STUDY: TRAINING {modality.upper()} QLSTM")
+    print(f"ABLATION STUDY: TRAINING {run_name.upper()} QLSTM")
     print("=" * 70)
 
     (
@@ -165,7 +168,7 @@ def train_ablation_model(modality):
         lesion_std,
         input_dim,
         test_leaf_ids,
-    ) = create_ablation_loaders(modality=modality, batch_size=CONFIG["batch_size"])
+    ) = create_ablation_loaders(modality=modality, batch_size=CONFIG["batch_size"], data_path=data_path)
 
     model = QLSTMModel(
         input_size=input_dim,
@@ -282,8 +285,8 @@ def train_ablation_model(modality):
         "Validation Disease Loss": val_disease_losses,
         "Validation Lesion Loss": val_lesion_losses,
     })
-    history_df.to_csv(f"outputs/ablation_{modality}_loss_history.csv", index=False)
-    print(f"\nSaved history -> outputs/ablation_{modality}_loss_history.csv")
+    history_df.to_csv(f"outputs/ablation_{run_name}_loss_history.csv", index=False)
+    print(f"\nSaved history -> outputs/ablation_{run_name}_loss_history.csv")
     print(f"Best validation loss: {best_val_loss:.6f} at epoch {best_epoch}")
 
     # Evaluate the single best validation checkpoint on the untouched test set
@@ -298,6 +301,7 @@ def train_ablation_model(modality):
         best_val_loss=best_val_loss,
         epochs_completed=len(train_losses),
         test_leaf_ids=test_leaf_ids,
+        run_name=run_name,
     )
     return metrics
 
@@ -313,9 +317,11 @@ def evaluate_ablation_test(
     best_val_loss,
     epochs_completed,
     test_leaf_ids,
+    run_name=None,
 ):
+    run_name = modality if run_name is None else run_name
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    checkpoint_path = f"checkpoints/ablation_{modality}_qlstm.pth"
+    checkpoint_path = f"checkpoints/ablation_{run_name}_qlstm.pth"
 
     model = QLSTMModel(
         input_size=input_dim,
@@ -374,7 +380,7 @@ def evaluate_ablation_test(
         },
     }
 
-    metrics_path = f"outputs/ablation_{modality}_qlstm_metrics.json"
+    metrics_path = f"outputs/ablation_{run_name}_qlstm_metrics.json"
     with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=4)
 
@@ -385,13 +391,13 @@ def evaluate_ablation_test(
         "actual_lesion": l_targets_orig,
         "predicted_lesion": l_preds_orig,
     })
-    preds_df.to_csv(f"outputs/ablation_{modality}_predictions.csv", index=False)
+    preds_df.to_csv(f"outputs/ablation_{run_name}_predictions.csv", index=False)
 
-    print(f"\n--- TEST SET EVALUATION ({modality.upper()}) ---")
+    print(f"\n--- TEST SET EVALUATION ({run_name.upper()}) ---")
     print(f"Disease Severity: R2={d_r2:.6f}, RMSE={d_rmse:.6f}, MAE={d_mae:.6f}, MSE={d_mse:.6f}")
     print(f"Lesion Area     : R2={l_r2:.6f}, RMSE={l_rmse:,.2f}, MAE={l_mae:,.2f}, MSE={l_mse:,.1f}")
     print(f"Saved metrics -> {metrics_path}")
-    print(f"Saved predictions -> outputs/ablation_{modality}_predictions.csv")
+    print(f"Saved predictions -> outputs/ablation_{run_name}_predictions.csv")
     return metrics
 
 
@@ -467,7 +473,11 @@ if __name__ == "__main__":
     parser.add_argument("--modality", type=str, choices=["metadata", "vit", "multimodal", "all"], help="Modality to train")
     parser.add_argument("--use_existing_multimodal", action="store_true", help="Copy and evaluate existing winning Exp 3 for multimodal")
     parser.add_argument("--compare_only", action="store_true", help="Build comparison table from existing JSONs")
+    parser.add_argument("--cohort", type=str, choices=["30", "100"], default="30", help="Leaf cohort size (30-leaf or 100-leaf dataset)")
     args = parser.parse_args()
+
+    cohort_data_path = DATA_PATH_100LEAVES if args.cohort == "100" else DATA_PATH
+    cohort_tag = f"{args.cohort}leaves" if args.cohort == "100" else None
 
     if args.compare_only:
         build_ablation_comparison_table()
@@ -475,10 +485,10 @@ if __name__ == "__main__":
         if args.use_existing_multimodal:
             copy_or_evaluate_multimodal()
         else:
-            train_ablation_model("multimodal")
+            train_ablation_model("multimodal", data_path=cohort_data_path, tag=cohort_tag)
         build_ablation_comparison_table()
     elif args.modality in ["metadata", "vit"]:
-        train_ablation_model(args.modality)
+        train_ablation_model(args.modality, data_path=cohort_data_path, tag=cohort_tag)
         build_ablation_comparison_table()
     elif args.modality == "all":
         train_ablation_model("metadata")
