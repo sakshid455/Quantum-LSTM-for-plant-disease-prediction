@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 # Number of qubits
-N_QUBITS = 4
+N_QUBITS = 8
 
 # Quantum simulator
 dev = qml.device("default.qubit", wires=N_QUBITS)
@@ -29,7 +29,7 @@ class QuantumLayer(nn.Module):
         super().__init__()
 
         weight_shapes = {
-            "weights": (2, N_QUBITS, 3)
+            "weights": (3, N_QUBITS, 3)
         }
 
         self.qlayer = qml.qnn.TorchLayer(

@@ -185,7 +185,7 @@ def train_ablation_model(modality, data_path=DATA_PATH, tag=None):
         optimizer, T_max=CONFIG["epochs"], eta_min=1e-5
     )
 
-    checkpoint_path = f"checkpoints/ablation_{modality}_qlstm.pth"
+    checkpoint_path = f"checkpoints/ablation_{run_name}_qlstm.pth"
     best_val_loss = float("inf")
     best_epoch = 0
     epochs_without_improvement = 0

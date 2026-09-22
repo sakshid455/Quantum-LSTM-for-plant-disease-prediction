@@ -1,6 +1,6 @@
-import torch
+﻿import torch
 import torch.nn as nn
-from .quantum_layer import QuantumLayer
+from .quantum_layer import QuantumLayer, N_QUBITS
 
 
 class QLSTMCell(nn.Module):
@@ -11,24 +11,40 @@ class QLSTMCell(nn.Module):
         self.hidden_size = hidden_size
 
         # Forget Gate
-        self.f_encoder = nn.Linear(input_size + hidden_size, 4)
+        self.f_encoder = nn.Sequential(
+            nn.Linear(input_size + hidden_size, 32), nn.GELU(), nn.Linear(32, N_QUBITS)
+        )
         self.f_quantum = QuantumLayer()
-        self.f_decoder = nn.Linear(4, hidden_size)
+        self.f_decoder = nn.Sequential(
+            nn.Linear(N_QUBITS, 32), nn.GELU(), nn.Linear(32, hidden_size)
+        )
 
         # Input Gate
-        self.i_encoder = nn.Linear(input_size + hidden_size, 4)
+        self.i_encoder = nn.Sequential(
+            nn.Linear(input_size + hidden_size, 32), nn.GELU(), nn.Linear(32, N_QUBITS)
+        )
         self.i_quantum = QuantumLayer()
-        self.i_decoder = nn.Linear(4, hidden_size)
+        self.i_decoder = nn.Sequential(
+            nn.Linear(N_QUBITS, 32), nn.GELU(), nn.Linear(32, hidden_size)
+        )
 
         # Output Gate
-        self.o_encoder = nn.Linear(input_size + hidden_size, 4)
+        self.o_encoder = nn.Sequential(
+            nn.Linear(input_size + hidden_size, 32), nn.GELU(), nn.Linear(32, N_QUBITS)
+        )
         self.o_quantum = QuantumLayer()
-        self.o_decoder = nn.Linear(4, hidden_size)
+        self.o_decoder = nn.Sequential(
+            nn.Linear(N_QUBITS, 32), nn.GELU(), nn.Linear(32, hidden_size)
+        )
 
         # Candidate Gate
-        self.g_encoder = nn.Linear(input_size + hidden_size, 4)
+        self.g_encoder = nn.Sequential(
+            nn.Linear(input_size + hidden_size, 32), nn.GELU(), nn.Linear(32, N_QUBITS)
+        )
         self.g_quantum = QuantumLayer()
-        self.g_decoder = nn.Linear(4, hidden_size)
+        self.g_decoder = nn.Sequential(
+            nn.Linear(N_QUBITS, 32), nn.GELU(), nn.Linear(32, hidden_size)
+        )
 
     def forward(self, x, hidden):
 
