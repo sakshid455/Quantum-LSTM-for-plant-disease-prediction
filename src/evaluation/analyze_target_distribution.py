@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
-DATA_PATH = "data/sequences/multimodal_temporal_sequences.npz"
+DATA_PATH = "data/sequences/rds_forecast_sequences.npz"
 
 
 # ============================================================

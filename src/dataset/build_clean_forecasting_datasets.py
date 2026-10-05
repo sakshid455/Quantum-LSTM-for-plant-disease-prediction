@@ -23,7 +23,9 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 
-RAW_100_PATH = "data/sequences/multimodal_temporal_sequences_100leaves.npz"
+# Raw 791-D contemporaneous file (leaky as-is); only its ViT features, la_tot and
+# the t+1 targets of the next window are used here.
+RAW_100_PATH = "data/sequences/archive_leaky/multimodal_temporal_sequences_100leaves.npz"
 EXP_DESIGN_PATH = "data/meta/experimental_design.csv"
 
 OUT_IMAGE_PATH = "data/sequences/clean_image_temporal_sequences_100leaves.npz"

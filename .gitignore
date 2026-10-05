@@ -47,3 +47,5 @@ scratch/
 
 # Environment Variables
 .env
+# Local Claude Code session data (worktrees, settings)
+.claude/

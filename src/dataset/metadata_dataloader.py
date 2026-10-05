@@ -6,7 +6,10 @@ from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 
 
-DATA_PATH = "data/sequences/metadata_temporal_sequences.npz"
+# Leak-free t+1 forecasting from 23 leaf/lesion features of the full ETH cohort
+# (built by build_temporal_sequences.py). The old contemporaneous 30-leaf file is
+# archived in data/sequences/archive_leaky/.
+DATA_PATH = "data/sequences/temporal_sequences.npz"
 
 
 class MetadataTemporalDataset(Dataset):

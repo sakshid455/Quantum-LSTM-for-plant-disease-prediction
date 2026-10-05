@@ -4,7 +4,7 @@ Features:
 - Automatic Retry & Exponential Backoff on network timeouts.
 - Incremental Checkpointing & Auto-Resume: never lose progress if connection drops.
 - Direct in-memory streaming into ViT-B/16 (0 bytes of raw PNG saved to disk).
-- Fused 791-D multimodal sliding sequences (T=4).
+- Fused 771-D (768 ViT + la_tot + fungicide + inoculation) windows [t-3..t] -> target at t+1.
 """
 
 import os
@@ -191,7 +191,7 @@ def main():
     parser = argparse.ArgumentParser(description="Resilient Stream ETH Zurich dataset into ViT+Metadata sequences")
     parser.add_argument("--num_leaves", type=int, default=100, help="Number of leaves to process")
     parser.add_argument("--seq_len", type=int, default=4, help="Temporal sequence sliding window length")
-    parser.add_argument("--output", type=str, default="data/sequences/multimodal_temporal_sequences_100leaves.npz", help="Output .npz path")
+    parser.add_argument("--output", type=str, default="data/sequences/stream_forecast_sequences_100leaves.npz", help="Output .npz path")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

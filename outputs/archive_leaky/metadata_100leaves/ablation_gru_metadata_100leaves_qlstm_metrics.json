@@ -1,0 +1,21 @@
+{
+    "modality": "metadata",
+    "architecture": "gru",
+    "input_features": 23,
+    "parameters": 5538,
+    "best_validation_epoch": 50,
+    "best_validation_loss": 0.021432518687620555,
+    "epochs_completed": 50,
+    "Disease Severity": {
+        "MSE": 0.00017873480101116002,
+        "RMSE": 0.013369173535082863,
+        "MAE": 0.00771416025236249,
+        "R2": 0.9902825951576233
+    },
+    "Lesion Area": {
+        "MSE": 8608514048.0,
+        "RMSE": 92782.07826945891,
+        "MAE": 33533.44921875,
+        "R2": 0.9585379958152771
+    }
+}

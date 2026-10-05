@@ -20,7 +20,7 @@ from src.dataset.multimodal_dataloader import create_multimodal_loaders
 # ============================================================
 
 parser = argparse.ArgumentParser(description="Multimodal QLSTM Training Pipeline")
-parser.add_argument("--data_path", type=str, default="data/sequences/multimodal_temporal_sequences_100leaves.npz", help="Path to sequence dataset (.npz)")
+parser.add_argument("--data_path", type=str, default="data/sequences/clean_multimodal_temporal_sequences_100leaves.npz", help="Path to sequence dataset (.npz)")
 parser.add_argument("--checkpoint_path", type=str, default="checkpoints/best_multimodal_qlstm.pth", help="Path to save best model checkpoint")
 parser.add_argument("--history_path", type=str, default="outputs/multimodal_loss_history.csv", help="Path to save loss history CSV")
 parser.add_argument("--metrics_path", type=str, default="outputs/multimodal_test_metrics.json", help="Path to save test metrics JSON")

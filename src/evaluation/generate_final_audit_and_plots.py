@@ -6,6 +6,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
+# This script re-audits the archived 100-leaf model, whose inputs contain the
+# target (see outputs/archive_leaky/README.md). Its numbers are not valid results.
+if os.environ.get("ALLOW_LEAKY") != "1":
+    sys.exit("Refusing to run: this audits the archived LEAKY 100-leaf model. Set ALLOW_LEAKY=1 to run anyway.")
+
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 os.makedirs("outputs", exist_ok=True)
@@ -16,9 +22,9 @@ os.makedirs("outputs/plots", exist_ok=True)
 # ============================================================
 
 seq_data_path = (
-    "data/sequences/multimodal_temporal_sequences_100leaves.npz"
-    if os.path.exists("data/sequences/multimodal_temporal_sequences_100leaves.npz")
-    else "data/sequences/multimodal_temporal_sequences.npz"
+    "data/sequences/archive_leaky/multimodal_temporal_sequences_100leaves.npz"
+    if os.path.exists("data/sequences/archive_leaky/multimodal_temporal_sequences_100leaves.npz")
+    else "data/sequences/archive_leaky/multimodal_temporal_sequences.npz"
 )
 data = np.load(seq_data_path, allow_pickle=True)
 X = data["X"]

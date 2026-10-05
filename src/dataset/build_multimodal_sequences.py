@@ -9,7 +9,8 @@ import pandas as pd
 
 INPUT_PATH = "data/features/multimodal_fusion.csv"
 TARGET_PATH = "data/features/feature_fusion.csv"
-OUTPUT_PATH = "data/sequences/multimodal_temporal_sequences.npz"
+# Contemporaneous target + lesion-derived inputs: LEAKY, kept only for the leakage audit.
+OUTPUT_PATH = "data/sequences/archive_leaky/multimodal_temporal_sequences.npz"
 
 SEQUENCE_LENGTH = 4
 

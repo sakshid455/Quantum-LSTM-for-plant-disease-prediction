@@ -6,7 +6,9 @@ from sklearn.model_selection import GroupShuffleSplit
 from sklearn.preprocessing import StandardScaler
 
 
-DATA_PATH = "data/sequences/multimodal_temporal_sequences_100leaves.npz"
+# Leak-free t+1 forecasting: 768 ViT + la_tot + fungicide + inoculation (771 features).
+# The old 791-D contemporaneous file is archived in data/sequences/archive_leaky/.
+DATA_PATH = "data/sequences/clean_multimodal_temporal_sequences_100leaves.npz"
 
 
 class MultimodalTemporalDataset(Dataset):

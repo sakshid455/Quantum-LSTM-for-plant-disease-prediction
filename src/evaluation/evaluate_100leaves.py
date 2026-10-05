@@ -1,3 +1,4 @@
+import sys
 """
 Comprehensive Post-Training Evaluation and Plotting for 100-Leaf Multimodal QLSTM
 Calculates overall and per-leaf metrics, generates publication-quality figures,
@@ -11,15 +12,21 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
+# This script re-audits the archived 100-leaf model, whose inputs contain the
+# target (see outputs/archive_leaky/README.md). Its numbers are not valid results.
+if os.environ.get("ALLOW_LEAKY") != "1":
+    sys.exit("Refusing to run: this audits the archived LEAKY 100-leaf model. Set ALLOW_LEAKY=1 to run anyway.")
+
+
 # Configure aesthetics
 plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
 plt.rcParams["font.sans-serif"] = "DejaVu Sans"
 plt.rcParams["axes.edgecolor"] = "#CBD5E1"
 plt.rcParams["axes.linewidth"] = 0.8
 
-PREDS_100_PATH = "outputs/multimodal_100leaves_predictions.csv"
-LOSS_100_PATH = "outputs/multimodal_100leaves_loss_history.csv"
-METRICS_100_PATH = "outputs/multimodal_100leaves_test_metrics.json"
+PREDS_100_PATH = "outputs/archive_leaky/multimodal_100leaves/multimodal_100leaves_predictions.csv"
+LOSS_100_PATH = "outputs/archive_leaky/multimodal_100leaves/multimodal_100leaves_loss_history.csv"
+METRICS_100_PATH = "outputs/archive_leaky/multimodal_100leaves/multimodal_100leaves_test_metrics.json"
 
 PREDS_30_PATH = "outputs/multimodal_predictions.csv"
 LOSS_30_PATH = "outputs/multimodal_loss_history.csv"
@@ -126,7 +133,7 @@ def evaluate_and_plot():
             "max_disease": ld_true.max()
         })
     leaf_summary_df = pd.DataFrame(per_leaf_records)
-    leaf_summary_df.to_csv("outputs/multimodal_100leaves_per_leaf_metrics.csv", index=False)
+    leaf_summary_df.to_csv("outputs/archive_leaky/multimodal_100leaves/multimodal_100leaves_per_leaf_metrics.csv", index=False)
     print("Saved per-leaf metrics -> outputs/multimodal_100leaves_per_leaf_metrics.csv")
 
     # 5. Cohort Scaling Comparison (30 leaves vs 100 leaves)
@@ -207,7 +214,7 @@ def update_dashboard_data(df100, d_r2, d_rmse, d_mae, l_r2, l_rmse, l_mae):
         "project": "Hybrid Vision Transformer-QLSTM for Wheat Foliar Disease Progression",
         "proposed_model": "Multimodal QLSTM (100 Leaves Scaled Cohort)",
         "dataset": {
-            "path": "data/sequences/multimodal_temporal_sequences_100leaves.npz",
+            "path": "data/sequences/archive_leaky/multimodal_temporal_sequences_100leaves.npz",
             "X_shape": [1190, 4, 791],
             "sequence_length": 4,
             "feature_dimension": 791,
