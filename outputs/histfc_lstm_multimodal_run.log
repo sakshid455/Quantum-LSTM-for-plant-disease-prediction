@@ -1,0 +1,48 @@
+
+======================================================================
+ABLATION STUDY: TRAINING LSTM_MULTIMODAL_HISTFC100 (LSTM)
+======================================================================
+[Multimodal (791 features)] Input X shape: (1091, 4, 791)
+Modality: multimodal | Architecture: lstm | Input dimension: 791 | Parameters: 105,666
+Epoch 01/50 | Train: 1.000644 (D:0.042672, L:1.1479) | Val: 0.794818 (D:0.036109, L:0.8675) | BEST SAVED
+Epoch 02/50 | Train: 0.665099 (D:0.018801, L:0.9542) | Val: 0.680672 (D:0.031871, L:0.7239) | BEST SAVED
+Epoch 03/50 | Train: 0.506014 (D:0.012092, L:0.7702) | Val: 0.581855 (D:0.028650, L:0.5907) | BEST SAVED
+Epoch 04/50 | Train: 0.394580 (D:0.008384, L:0.6215) | Val: 0.519680 (D:0.027800, L:0.4834) | BEST SAVED
+Epoch 05/50 | Train: 0.314040 (D:0.005961, L:0.5089) | Val: 0.477500 (D:0.026981, L:0.4154) | BEST SAVED
+Epoch 06/50 | Train: 0.261678 (D:0.004409, L:0.4352) | Val: 0.453540 (D:0.026656, L:0.3740) | BEST SAVED
+Epoch 07/50 | Train: 0.220253 (D:0.003191, L:0.3767) | Val: 0.436153 (D:0.026479, L:0.3427) | BEST SAVED
+Epoch 08/50 | Train: 0.191723 (D:0.002397, L:0.3355) | Val: 0.416611 (D:0.025595, L:0.3213) | BEST SAVED
+Epoch 09/50 | Train: 0.169156 (D:0.001792, L:0.3025) | Val: 0.421137 (D:0.026796, L:0.3064) | no imp (1/10)
+Epoch 10/50 | Train: 0.151319 (D:0.001467, L:0.2733) | Val: 0.415100 (D:0.026533, L:0.2995) | BEST SAVED
+Epoch 11/50 | Train: 0.138012 (D:0.001184, L:0.2524) | Val: 0.412649 (D:0.026900, L:0.2873) | BEST SAVED
+Epoch 12/50 | Train: 0.125509 (D:0.000980, L:0.2314) | Val: 0.404548 (D:0.026365, L:0.2818) | BEST SAVED
+Epoch 13/50 | Train: 0.113836 (D:0.000791, L:0.2118) | Val: 0.396870 (D:0.026312, L:0.2675) | BEST SAVED
+Epoch 14/50 | Train: 0.103410 (D:0.000726, L:0.1923) | Val: 0.399987 (D:0.026695, L:0.2661) | no imp (1/10)
+Epoch 15/50 | Train: 0.094854 (D:0.000643, L:0.1768) | Val: 0.397258 (D:0.026657, L:0.2614) | no imp (2/10)
+Epoch 16/50 | Train: 0.087646 (D:0.000519, L:0.1649) | Val: 0.393968 (D:0.026604, L:0.2559) | BEST SAVED
+Epoch 17/50 | Train: 0.080537 (D:0.000456, L:0.1519) | Val: 0.391311 (D:0.026518, L:0.2523) | BEST SAVED
+Epoch 18/50 | Train: 0.074451 (D:0.000417, L:0.1406) | Val: 0.388700 (D:0.026580, L:0.2458) | BEST SAVED
+Epoch 19/50 | Train: 0.068991 (D:0.000339, L:0.1312) | Val: 0.383681 (D:0.026130, L:0.2448) | BEST SAVED
+Epoch 20/50 | Train: 0.064577 (D:0.000297, L:0.1232) | Val: 0.383122 (D:0.026319, L:0.2399) | BEST SAVED
+Epoch 21/50 | Train: 0.060725 (D:0.000287, L:0.1157) | Val: 0.379186 (D:0.026103, L:0.2363) | BEST SAVED
+Epoch 22/50 | Train: 0.057312 (D:0.000259, L:0.1094) | Val: 0.384014 (D:0.026585, L:0.2363) | no imp (1/10)
+Epoch 23/50 | Train: 0.053658 (D:0.000237, L:0.1026) | Val: 0.383429 (D:0.026505, L:0.2368) | no imp (2/10)
+Epoch 24/50 | Train: 0.050768 (D:0.000201, L:0.0975) | Val: 0.381091 (D:0.026542, L:0.2313) | no imp (3/10)
+Epoch 25/50 | Train: 0.047886 (D:0.000193, L:0.0919) | Val: 0.382340 (D:0.026658, L:0.2315) | no imp (4/10)
+Epoch 26/50 | Train: 0.045986 (D:0.000184, L:0.0883) | Val: 0.384600 (D:0.026966, L:0.2299) | no imp (5/10)
+Epoch 27/50 | Train: 0.043019 (D:0.000157, L:0.0829) | Val: 0.379388 (D:0.026496, L:0.2289) | no imp (6/10)
+Epoch 28/50 | Train: 0.041005 (D:0.000148, L:0.0790) | Val: 0.382908 (D:0.026978, L:0.2263) | no imp (7/10)
+Epoch 29/50 | Train: 0.039221 (D:0.000140, L:0.0756) | Val: 0.382452 (D:0.026962, L:0.2257) | no imp (8/10)
+Epoch 30/50 | Train: 0.037773 (D:0.000126, L:0.0730) | Val: 0.380497 (D:0.026869, L:0.2236) | no imp (9/10)
+Epoch 31/50 | Train: 0.036451 (D:0.000126, L:0.0704) | Val: 0.382596 (D:0.027109, L:0.2230) | no imp (10/10)
+
+[EARLY STOPPING] Triggered at epoch 31.
+
+Saved history -> outputs/ablation_lstm_multimodal_histfc100_loss_history.csv
+Best validation loss: 0.379186 at epoch 21
+
+--- TEST SET EVALUATION (LSTM_MULTIMODAL_HISTFC100) ---
+Disease Severity: R2=-0.611331, RMSE=0.177905, MAE=0.144059, MSE=0.031650
+Lesion Area     : R2=0.731321, RMSE=243,993.12, MAE=143,961.70, MSE=59,532,644,352.0
+Saved metrics -> outputs/ablation_lstm_multimodal_histfc100_qlstm_metrics.json
+Saved predictions -> outputs/ablation_lstm_multimodal_histfc100_predictions.csv

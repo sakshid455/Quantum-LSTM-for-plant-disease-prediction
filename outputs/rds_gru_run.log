@@ -1,0 +1,65 @@
+
+======================================================================
+ABLATION STUDY: TRAINING GRU_MULTIMODAL_RDS (GRU)
+======================================================================
+[Multimodal (791 features)] Input X shape: (7710, 4, 20)
+Modality: multimodal | Architecture: gru | Input dimension: 20 | Parameters: 5,250
+Epoch 01/50 | Train: 0.581954 (D:0.022871, L:0.7065) | Val: 0.252392 (D:0.004342, L:0.4180) | BEST SAVED
+Epoch 02/50 | Train: 0.201676 (D:0.003670, L:0.3299) | Val: 0.201305 (D:0.003606, L:0.3305) | BEST SAVED
+Epoch 03/50 | Train: 0.171540 (D:0.003301, L:0.2771) | Val: 0.181572 (D:0.003358, L:0.2960) | BEST SAVED
+Epoch 04/50 | Train: 0.154734 (D:0.003115, L:0.2472) | Val: 0.168830 (D:0.003206, L:0.2735) | BEST SAVED
+Epoch 05/50 | Train: 0.144091 (D:0.002991, L:0.2284) | Val: 0.160861 (D:0.003098, L:0.2598) | BEST SAVED
+Epoch 06/50 | Train: 0.137376 (D:0.002902, L:0.2167) | Val: 0.155575 (D:0.003072, L:0.2497) | BEST SAVED
+Epoch 07/50 | Train: 0.133050 (D:0.002842, L:0.2093) | Val: 0.152633 (D:0.003054, L:0.2442) | BEST SAVED
+Epoch 08/50 | Train: 0.129891 (D:0.002800, L:0.2038) | Val: 0.147238 (D:0.002937, L:0.2357) | BEST SAVED
+Epoch 09/50 | Train: 0.127293 (D:0.002721, L:0.2002) | Val: 0.143786 (D:0.002863, L:0.2303) | BEST SAVED
+Epoch 10/50 | Train: 0.125727 (D:0.002693, L:0.1976) | Val: 0.142059 (D:0.002874, L:0.2266) | BEST SAVED
+Epoch 11/50 | Train: 0.124678 (D:0.002665, L:0.1961) | Val: 0.140689 (D:0.002909, L:0.2232) | BEST SAVED
+Epoch 12/50 | Train: 0.123803 (D:0.002654, L:0.1945) | Val: 0.138561 (D:0.002807, L:0.2210) | BEST SAVED
+Epoch 13/50 | Train: 0.122583 (D:0.002607, L:0.1930) | Val: 0.137715 (D:0.002831, L:0.2188) | BEST SAVED
+Epoch 14/50 | Train: 0.122092 (D:0.002588, L:0.1924) | Val: 0.136920 (D:0.002803, L:0.2178) | BEST SAVED
+Epoch 15/50 | Train: 0.121482 (D:0.002571, L:0.1915) | Val: 0.135771 (D:0.002795, L:0.2156) | BEST SAVED
+Epoch 16/50 | Train: 0.121239 (D:0.002562, L:0.1912) | Val: 0.135205 (D:0.002779, L:0.2148) | BEST SAVED
+Epoch 17/50 | Train: 0.120798 (D:0.002550, L:0.1906) | Val: 0.134602 (D:0.002782, L:0.2136) | BEST SAVED
+Epoch 18/50 | Train: 0.120672 (D:0.002548, L:0.1904) | Val: 0.134105 (D:0.002773, L:0.2127) | BEST SAVED
+Epoch 19/50 | Train: 0.120099 (D:0.002530, L:0.1896) | Val: 0.134031 (D:0.002799, L:0.2121) | BEST SAVED
+Epoch 20/50 | Train: 0.119906 (D:0.002521, L:0.1894) | Val: 0.133551 (D:0.002779, L:0.2115) | BEST SAVED
+Epoch 21/50 | Train: 0.119476 (D:0.002496, L:0.1890) | Val: 0.133575 (D:0.002802, L:0.2111) | no imp (1/10)
+Epoch 22/50 | Train: 0.119066 (D:0.002487, L:0.1884) | Val: 0.133091 (D:0.002770, L:0.2108) | BEST SAVED
+Epoch 23/50 | Train: 0.118785 (D:0.002475, L:0.1881) | Val: 0.132921 (D:0.002782, L:0.2102) | BEST SAVED
+Epoch 24/50 | Train: 0.118488 (D:0.002463, L:0.1877) | Val: 0.132693 (D:0.002761, L:0.2102) | BEST SAVED
+Epoch 25/50 | Train: 0.118472 (D:0.002470, L:0.1875) | Val: 0.132054 (D:0.002746, L:0.2092) | BEST SAVED
+Epoch 26/50 | Train: 0.117895 (D:0.002452, L:0.1867) | Val: 0.131910 (D:0.002743, L:0.2090) | BEST SAVED
+Epoch 27/50 | Train: 0.117769 (D:0.002440, L:0.1867) | Val: 0.132079 (D:0.002744, L:0.2093) | no imp (1/10)
+Epoch 28/50 | Train: 0.117760 (D:0.002442, L:0.1867) | Val: 0.131608 (D:0.002745, L:0.2083) | BEST SAVED
+Epoch 29/50 | Train: 0.117485 (D:0.002430, L:0.1864) | Val: 0.131836 (D:0.002761, L:0.2084) | no imp (1/10)
+Epoch 30/50 | Train: 0.117131 (D:0.002419, L:0.1859) | Val: 0.131137 (D:0.002721, L:0.2078) | BEST SAVED
+Epoch 31/50 | Train: 0.117238 (D:0.002434, L:0.1858) | Val: 0.131111 (D:0.002721, L:0.2078) | BEST SAVED
+Epoch 32/50 | Train: 0.116925 (D:0.002403, L:0.1858) | Val: 0.131010 (D:0.002721, L:0.2076) | BEST SAVED
+Epoch 33/50 | Train: 0.116844 (D:0.002414, L:0.1854) | Val: 0.131057 (D:0.002723, L:0.2076) | no imp (1/10)
+Epoch 34/50 | Train: 0.116780 (D:0.002408, L:0.1854) | Val: 0.130983 (D:0.002726, L:0.2074) | BEST SAVED
+Epoch 35/50 | Train: 0.116513 (D:0.002402, L:0.1850) | Val: 0.130877 (D:0.002727, L:0.2072) | BEST SAVED
+Epoch 36/50 | Train: 0.116335 (D:0.002390, L:0.1849) | Val: 0.130917 (D:0.002737, L:0.2071) | no imp (1/10)
+Epoch 37/50 | Train: 0.116265 (D:0.002382, L:0.1849) | Val: 0.130827 (D:0.002730, L:0.2071) | BEST SAVED
+Epoch 38/50 | Train: 0.116173 (D:0.002376, L:0.1848) | Val: 0.131139 (D:0.002761, L:0.2071) | no imp (1/10)
+Epoch 39/50 | Train: 0.116136 (D:0.002383, L:0.1846) | Val: 0.130671 (D:0.002720, L:0.2069) | BEST SAVED
+Epoch 40/50 | Train: 0.116145 (D:0.002379, L:0.1847) | Val: 0.130745 (D:0.002729, L:0.2069) | no imp (1/10)
+Epoch 41/50 | Train: 0.115916 (D:0.002372, L:0.1844) | Val: 0.130601 (D:0.002721, L:0.2068) | BEST SAVED
+Epoch 42/50 | Train: 0.115875 (D:0.002370, L:0.1843) | Val: 0.130702 (D:0.002727, L:0.2069) | no imp (1/10)
+Epoch 43/50 | Train: 0.115749 (D:0.002363, L:0.1842) | Val: 0.130678 (D:0.002729, L:0.2068) | no imp (2/10)
+Epoch 44/50 | Train: 0.115783 (D:0.002367, L:0.1842) | Val: 0.130646 (D:0.002726, L:0.2068) | no imp (3/10)
+Epoch 45/50 | Train: 0.115569 (D:0.002361, L:0.1839) | Val: 0.130736 (D:0.002737, L:0.2067) | no imp (4/10)
+Epoch 46/50 | Train: 0.115537 (D:0.002362, L:0.1838) | Val: 0.130465 (D:0.002720, L:0.2065) | BEST SAVED
+Epoch 47/50 | Train: 0.115610 (D:0.002360, L:0.1840) | Val: 0.130634 (D:0.002735, L:0.2066) | no imp (1/10)
+Epoch 48/50 | Train: 0.115651 (D:0.002363, L:0.1840) | Val: 0.130428 (D:0.002716, L:0.2065) | BEST SAVED
+Epoch 49/50 | Train: 0.115500 (D:0.002357, L:0.1839) | Val: 0.130564 (D:0.002727, L:0.2066) | no imp (1/10)
+Epoch 50/50 | Train: 0.115552 (D:0.002360, L:0.1839) | Val: 0.130386 (D:0.002715, L:0.2065) | BEST SAVED
+
+Saved history -> outputs/ablation_gru_multimodal_rds_loss_history.csv
+Best validation loss: 0.130386 at epoch 50
+
+--- TEST SET EVALUATION (GRU_MULTIMODAL_RDS) ---
+Disease Severity: R2=0.860216, RMSE=0.050794, MAE=0.023939, MSE=0.002580
+Lesion Area     : R2=0.814093, RMSE=209,582.99, MAE=87,875.22, MSE=43,925,028,864.0
+Saved metrics -> outputs/ablation_gru_multimodal_rds_qlstm_metrics.json
+Saved predictions -> outputs/ablation_gru_multimodal_rds_predictions.csv

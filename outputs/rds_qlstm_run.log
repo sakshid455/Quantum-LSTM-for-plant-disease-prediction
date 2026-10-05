@@ -1,0 +1,10 @@
+
+======================================================================
+ABLATION STUDY: TRAINING MULTIMODAL_RDS (QLSTM)
+======================================================================
+[Multimodal (791 features)] Input X shape: (7710, 4, 20)
+Modality: multimodal | Architecture: qlstm | Input dimension: 20 | Parameters: 14,594
+Epoch 01/50 | Train: 0.675731 (D:0.018103, L:0.9894) | Val: 0.552849 (D:0.010355, L:0.8986) | BEST SAVED
+Epoch 02/50 | Train: 0.372949 (D:0.007228, L:0.6013) | Val: 0.257896 (D:0.005662, L:0.4025) | BEST SAVED
+Epoch 03/50 | Train: 0.200503 (D:0.004550, L:0.3100) | Val: 0.189275 (D:0.004120, L:0.2961) | BEST SAVED
+Epoch 04/50 | Train: 0.160933 (D:0.003803, L:0.2458) | Val: 0.169181 (D:0.003642, L:0.2655) | BEST SAVED

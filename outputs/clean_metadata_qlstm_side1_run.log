@@ -1,0 +1,43 @@
+
+======================================================================
+ABLATION STUDY: TRAINING CLEAN_METADATA_100LEAVES (QLSTM)
+======================================================================
+[Clean Metadata-Only (3 legitimate exogenous features)] Input X shape: (1091, 4, 3)
+Modality: clean_metadata | Architecture: qlstm | Input dimension: 3 | Parameters: 12,418
+Epoch 01/50 | Train: 1.037355 (D:0.052662, L:1.0215) | Val: 0.725366 (D:0.028073, L:0.8893) | BEST SAVED
+Epoch 02/50 | Train: 0.883888 (D:0.036785, L:1.0321) | Val: 0.607372 (D:0.017665, L:0.8614) | BEST SAVED
+Epoch 03/50 | Train: 0.770484 (D:0.026887, L:1.0032) | Val: 0.581388 (D:0.016273, L:0.8373) | BEST SAVED
+Epoch 04/50 | Train: 0.768827 (D:0.025976, L:1.0181) | Val: 0.579076 (D:0.016520, L:0.8278) | BEST SAVED
+Epoch 05/50 | Train: 0.759528 (D:0.026040, L:0.9982) | Val: 0.576259 (D:0.016482, L:0.8229) | BEST SAVED
+Epoch 06/50 | Train: 0.760183 (D:0.025995, L:1.0005) | Val: 0.573927 (D:0.016386, L:0.8201) | BEST SAVED
+Epoch 07/50 | Train: 0.757054 (D:0.025732, L:0.9995) | Val: 0.572069 (D:0.016407, L:0.8160) | BEST SAVED
+Epoch 08/50 | Train: 0.773173 (D:0.026097, L:1.0244) | Val: 0.573289 (D:0.016566, L:0.8153) | no imp (1/10)
+Epoch 09/50 | Train: 0.754370 (D:0.025525, L:0.9982) | Val: 0.570989 (D:0.016368, L:0.8146) | BEST SAVED
+Epoch 10/50 | Train: 0.755672 (D:0.025336, L:1.0046) | Val: 0.571022 (D:0.016523, L:0.8116) | no imp (1/10)
+Epoch 11/50 | Train: 0.756931 (D:0.025285, L:1.0082) | Val: 0.571175 (D:0.016506, L:0.8122) | no imp (2/10)
+Epoch 12/50 | Train: 0.754937 (D:0.025528, L:0.9993) | Val: 0.570573 (D:0.016471, L:0.8117) | BEST SAVED
+Epoch 13/50 | Train: 0.751325 (D:0.025162, L:0.9994) | Val: 0.571626 (D:0.016564, L:0.8120) | no imp (1/10)
+Epoch 14/50 | Train: 0.754982 (D:0.025477, L:1.0004) | Val: 0.571217 (D:0.016537, L:0.8117) | no imp (2/10)
+Epoch 15/50 | Train: 0.756267 (D:0.025620, L:1.0001) | Val: 0.570782 (D:0.016521, L:0.8111) | no imp (3/10)
+Epoch 16/50 | Train: 0.753548 (D:0.025313, L:1.0008) | Val: 0.569750 (D:0.016521, L:0.8091) | BEST SAVED
+Epoch 17/50 | Train: 0.749576 (D:0.024846, L:1.0022) | Val: 0.570062 (D:0.016589, L:0.8084) | no imp (1/10)
+Epoch 18/50 | Train: 0.753007 (D:0.025111, L:1.0038) | Val: 0.569860 (D:0.016610, L:0.8075) | no imp (2/10)
+Epoch 19/50 | Train: 0.753759 (D:0.025396, L:0.9996) | Val: 0.571762 (D:0.016803, L:0.8075) | no imp (3/10)
+Epoch 20/50 | Train: 0.763762 (D:0.025928, L:1.0090) | Val: 0.571731 (D:0.016793, L:0.8076) | no imp (4/10)
+Epoch 21/50 | Train: 0.755106 (D:0.025392, L:1.0024) | Val: 0.570262 (D:0.016629, L:0.8079) | no imp (5/10)
+Epoch 22/50 | Train: 0.752628 (D:0.024988, L:1.0055) | Val: 0.573058 (D:0.016941, L:0.8073) | no imp (6/10)
+Epoch 23/50 | Train: 0.754210 (D:0.025088, L:1.0067) | Val: 0.573425 (D:0.016934, L:0.8082) | no imp (7/10)
+Epoch 24/50 | Train: 0.749886 (D:0.024914, L:1.0015) | Val: 0.574142 (D:0.016927, L:0.8097) | no imp (8/10)
+Epoch 25/50 | Train: 0.752357 (D:0.025090, L:1.0029) | Val: 0.573282 (D:0.016853, L:0.8095) | no imp (9/10)
+Epoch 26/50 | Train: 0.772535 (D:0.025533, L:1.0344) | Val: 0.574952 (D:0.017035, L:0.8092) | no imp (10/10)
+
+[EARLY STOPPING] Triggered at epoch 26.
+
+Saved history -> outputs/ablation_clean_metadata_100leaves_loss_history.csv
+Best validation loss: 0.569750 at epoch 16
+
+--- TEST SET EVALUATION (CLEAN_METADATA_100LEAVES) ---
+Disease Severity: R2=-0.019056, RMSE=0.141480, MAE=0.087873, MSE=0.020017
+Lesion Area     : R2=0.001296, RMSE=470,412.71, MAE=286,246.22, MSE=221,288,120,320.0
+Saved metrics -> outputs/ablation_clean_metadata_100leaves_qlstm_metrics.json
+Saved predictions -> outputs/ablation_clean_metadata_100leaves_predictions.csv

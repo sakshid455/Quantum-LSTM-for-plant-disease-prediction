@@ -14,10 +14,41 @@ from torch.utils.data import Dataset, DataLoader
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from src.quantum.qlstm_model import QLSTMModel
+from src.quantum.lstm_model import LSTMModel
+from src.quantum.gru_model import GRUModel
 
 
-DATA_PATH = "data/sequences/multimodal_temporal_sequences.npz"
-DATA_PATH_100LEAVES = "data/sequences/multimodal_temporal_sequences_100leaves.npz"
+# Leak-free t+1 forecasting datasets only. The contemporaneous datasets with
+# target-derived inputs live in data/sequences/archive_leaky/ and must not be
+# used for reported results (see outputs/archive_leaky/README.md).
+DATASETS = {
+    # 995 leaves, 20 leaf-level features from data_leaf.rds (primary benchmark)
+    "rds": "data/sequences/rds_forecast_sequences.npz",
+    # 99 leaves, 768 ViT + 23 lesion/leaf features, re-paired to a t+1 target
+    "history100": "data/sequences/history_forecast_sequences_100leaves.npz",
+    # 99 leaves, 768 ViT features only
+    "clean_image": "data/sequences/clean_image_temporal_sequences_100leaves.npz",
+    # 99 leaves, 768 ViT + la_tot + fungicide + inoculation
+    "clean_multimodal": "data/sequences/clean_multimodal_temporal_sequences_100leaves.npz",
+    # 99 leaves, la_tot + fungicide + inoculation only
+    "clean_metadata": "data/sequences/clean_metadata_temporal_sequences_100leaves.npz",
+}
+DATA_PATH = DATASETS["rds"]
+VIT_DIM = 768
+
+ARCHITECTURES = {
+    "qlstm": QLSTMModel,
+    "lstm": LSTMModel,
+    "gru": GRUModel,
+}
+
+
+def build_model(architecture, input_dim, hidden_size, mlp_heads):
+    if architecture == "qlstm":
+        return QLSTMModel(input_size=input_dim, hidden_size=hidden_size, mlp_heads=mlp_heads)
+    # Classical LSTM/GRU baselines share the same (disease_output, lesion_output)
+    # interface as QLSTMModel but don't support the mlp_heads option.
+    return ARCHITECTURES[architecture](input_size=input_dim, hidden_size=hidden_size)
 
 
 class TemporalSequenceDataset(Dataset):
@@ -47,16 +78,23 @@ def create_ablation_loaders(modality="multimodal", batch_size=8, random_state=42
     y_lesion = data["y_lesion_area"]
     leaf_ids = data["leaf_ids"]
 
-    # Select features based on modality
+    # Select features based on modality. "metadata"/"vit" slice the fused
+    # [768 ViT | metadata] layout; every other modality uses all columns.
+    if modality in ("metadata", "vit"):
+        if X_full.shape[-1] <= VIT_DIM:
+            raise ValueError(
+                f"--modality {modality} needs a fused ViT+metadata dataset "
+                f"(e.g. --dataset history100); {data_path} has {X_full.shape[-1]} features"
+            )
     if modality == "metadata":
-        X = X_full[:, :, 768:]  # 23 metadata features
-        modality_name = "Metadata-Only (23 features)"
+        X = X_full[:, :, VIT_DIM:]
+        modality_name = f"Metadata-Only ({X.shape[-1]} features)"
     elif modality == "vit":
-        X = X_full[:, :, :768]  # 768 ViT visual features
-        modality_name = "ViT-Only (768 features)"
-    elif modality == "multimodal":
-        X = X_full              # 791 fused features (768 ViT + 23 metadata)
-        modality_name = "Multimodal (791 features)"
+        X = X_full[:, :, :VIT_DIM]
+        modality_name = f"ViT-Only ({VIT_DIM} features)"
+    elif modality in ("multimodal", "clean_metadata"):
+        X = X_full
+        modality_name = f"All features ({X.shape[-1]})"
     else:
         raise ValueError(f"Unknown modality: {modality}")
 
@@ -148,16 +186,22 @@ CONFIG = {
 }
 
 
-def train_ablation_model(modality, data_path=DATA_PATH, tag=None):
+def train_ablation_model(modality, data_path=DATA_PATH, tag=None, architecture="qlstm", seed=None):
     run_name = modality if tag is None else f"{modality}_{tag}"
+    if architecture != "qlstm":
+        run_name = f"{architecture}_{run_name}"
+    # An explicit seed controls both the leaf split and weight initialisation.
+    if seed is not None:
+        run_name = f"{run_name}_seed{seed}"
+    seed = 42 if seed is None else seed
 
-    set_seed(42)
+    set_seed(seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     os.makedirs("checkpoints", exist_ok=True)
     os.makedirs("outputs", exist_ok=True)
 
     print("\n" + "=" * 70)
-    print(f"ABLATION STUDY: TRAINING {run_name.upper()} QLSTM")
+    print(f"ABLATION STUDY: TRAINING {run_name.upper()} ({architecture.upper()})")
     print("=" * 70)
 
     (
@@ -168,16 +212,12 @@ def train_ablation_model(modality, data_path=DATA_PATH, tag=None):
         lesion_std,
         input_dim,
         test_leaf_ids,
-    ) = create_ablation_loaders(modality=modality, batch_size=CONFIG["batch_size"], data_path=data_path)
+    ) = create_ablation_loaders(modality=modality, batch_size=CONFIG["batch_size"], random_state=seed, data_path=data_path)
 
-    model = QLSTMModel(
-        input_size=input_dim,
-        hidden_size=CONFIG["hidden_size"],
-        mlp_heads=CONFIG["mlp_heads"],
-    ).to(device)
+    model = build_model(architecture, input_dim, CONFIG["hidden_size"], CONFIG["mlp_heads"]).to(device)
 
     param_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"Modality: {modality} | Input dimension: {input_dim} | Parameters: {param_count:,}")
+    print(f"Modality: {modality} | Architecture: {architecture} | Input dimension: {input_dim} | Parameters: {param_count:,}")
 
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=CONFIG["lr"])
@@ -302,6 +342,7 @@ def train_ablation_model(modality, data_path=DATA_PATH, tag=None):
         epochs_completed=len(train_losses),
         test_leaf_ids=test_leaf_ids,
         run_name=run_name,
+        architecture=architecture,
     )
     return metrics
 
@@ -318,16 +359,13 @@ def evaluate_ablation_test(
     epochs_completed,
     test_leaf_ids,
     run_name=None,
+    architecture="qlstm",
 ):
     run_name = modality if run_name is None else run_name
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     checkpoint_path = f"checkpoints/ablation_{run_name}_qlstm.pth"
 
-    model = QLSTMModel(
-        input_size=input_dim,
-        hidden_size=CONFIG["hidden_size"],
-        mlp_heads=CONFIG["mlp_heads"],
-    ).to(device)
+    model = build_model(architecture, input_dim, CONFIG["hidden_size"], CONFIG["mlp_heads"]).to(device)
 
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.eval()
@@ -361,6 +399,7 @@ def evaluate_ablation_test(
 
     metrics = {
         "modality": modality,
+        "architecture": architecture,
         "input_features": input_dim,
         "parameters": param_count,
         "best_validation_epoch": best_epoch,
@@ -401,102 +440,19 @@ def evaluate_ablation_test(
     return metrics
 
 
-def copy_or_evaluate_multimodal():
-    # If the winning Exp 3 checkpoint exists and matches configuration, preserve it
-    exp3_ckpt = "checkpoints/best_qlstm_exp3.pth"
-    target_ckpt = "checkpoints/ablation_multimodal_qlstm.pth"
-
-    import shutil
-    shutil.copy(exp3_ckpt, target_ckpt)
-
-    # Evaluate on test set
-    _, _, test_loader, lesion_mean, lesion_std, input_dim, test_leaf_ids = create_ablation_loaders(
-        modality="multimodal", batch_size=8
-    )
-
-    with open("outputs/qlstm_exp3_val_summary.json") as f:
-        val_summary = json.load(f)
-
-    metrics = evaluate_ablation_test(
-        modality="multimodal",
-        test_loader=test_loader,
-        lesion_mean=lesion_mean,
-        lesion_std=lesion_std,
-        input_dim=input_dim,
-        param_count=15010,
-        best_epoch=val_summary["best_epoch"],
-        best_val_loss=val_summary["best_val_loss"],
-        epochs_completed=val_summary["epochs_completed"],
-        test_leaf_ids=test_leaf_ids,
-    )
-    return metrics
-
-
-def build_ablation_comparison_table():
-    modalities = ["metadata", "vit", "multimodal"]
-    rows = []
-
-    for m in modalities:
-        m_path = f"outputs/ablation_{m}_qlstm_metrics.json"
-        if os.path.exists(m_path):
-            with open(m_path) as f:
-                d = json.load(f)
-
-            rows.append({
-                "Model": f"QLSTM ({m.capitalize()}-Only)" if m != "multimodal" else "QLSTM (Multimodal)",
-                "Input": "23 Metadata" if m == "metadata" else ("768 ViT" if m == "vit" else "768 ViT + 23 Metadata (791)"),
-                "Disease R2": d["Disease Severity"]["R2"],
-                "Disease RMSE": d["Disease Severity"]["RMSE"],
-                "Disease MAE": d["Disease Severity"]["MAE"],
-                "Disease MSE": d["Disease Severity"]["MSE"],
-                "Lesion R2": d["Lesion Area"]["R2"],
-                "Lesion RMSE": d["Lesion Area"]["RMSE"],
-                "Lesion MAE": d["Lesion Area"]["MAE"],
-                "Lesion MSE": d["Lesion Area"]["MSE"],
-                "Parameters": d["parameters"],
-                "Best_Val_Epoch": d["best_validation_epoch"],
-                "Best_Val_Loss": d["best_validation_loss"],
-            })
-
-    comp_df = pd.DataFrame(rows)
-    comp_df.to_csv("outputs/qlstm_ablation_comparison.csv", index=False)
-    print("\n" + "=" * 100)
-    print("FINAL ABLATION STUDY COMPARISON TABLE")
-    print("=" * 100)
-    print(comp_df[["Model", "Input", "Disease R2", "Disease RMSE", "Lesion R2", "Lesion RMSE", "Parameters"]].to_string(index=False))
-    print(f"\nSaved comparison -> outputs/qlstm_ablation_comparison.csv")
-    return comp_df
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--modality", type=str, choices=["metadata", "vit", "multimodal", "all"], help="Modality to train")
-    parser.add_argument("--use_existing_multimodal", action="store_true", help="Copy and evaluate existing winning Exp 3 for multimodal")
-    parser.add_argument("--compare_only", action="store_true", help="Build comparison table from existing JSONs")
-    parser.add_argument("--cohort", type=str, choices=["30", "100"], default="30", help="Leaf cohort size (30-leaf or 100-leaf dataset)")
+    parser.add_argument("--dataset", type=str, choices=sorted(DATASETS), default="rds", help="Leak-free t+1 forecasting dataset")
+    parser.add_argument("--modality", type=str, choices=["multimodal", "metadata", "vit", "clean_metadata", "all"], default="multimodal",
+                        help="multimodal = all features of the dataset; metadata/vit slice the fused history100 layout; all = the three modalities on history100")
+    parser.add_argument("--architecture", type=str, choices=["qlstm", "lstm", "gru"], default="qlstm", help="Recurrent architecture to train")
+    parser.add_argument("--seed", type=int, default=None, help="Seed for the leaf split and initialisation (appended to output names)")
     args = parser.parse_args()
 
-    cohort_data_path = DATA_PATH_100LEAVES if args.cohort == "100" else DATA_PATH
-    cohort_tag = f"{args.cohort}leaves" if args.cohort == "100" else None
-
-    if args.compare_only:
-        build_ablation_comparison_table()
-    elif args.modality == "multimodal":
-        if args.use_existing_multimodal:
-            copy_or_evaluate_multimodal()
-        else:
-            train_ablation_model("multimodal", data_path=cohort_data_path, tag=cohort_tag)
-        build_ablation_comparison_table()
-    elif args.modality in ["metadata", "vit"]:
-        train_ablation_model(args.modality, data_path=cohort_data_path, tag=cohort_tag)
-        build_ablation_comparison_table()
-    elif args.modality == "all":
-        train_ablation_model("metadata")
-        train_ablation_model("vit")
-        if args.use_existing_multimodal:
-            copy_or_evaluate_multimodal()
-        else:
-            train_ablation_model("multimodal")
-        build_ablation_comparison_table()
+    if args.modality == "clean_metadata":
+        args.dataset = "clean_metadata"
+    if args.modality == "all":
+        for m in ["metadata", "vit", "multimodal"]:
+            train_ablation_model(m, data_path=DATASETS["history100"], tag="history100", architecture=args.architecture, seed=args.seed)
     else:
-        parser.print_help()
+        train_ablation_model(args.modality, data_path=DATASETS[args.dataset], tag=args.dataset, architecture=args.architecture, seed=args.seed)

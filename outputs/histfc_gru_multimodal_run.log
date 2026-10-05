@@ -1,0 +1,65 @@
+
+======================================================================
+ABLATION STUDY: TRAINING GRU_MULTIMODAL_HISTFC100 (GRU)
+======================================================================
+[Multimodal (791 features)] Input X shape: (1091, 4, 791)
+Modality: multimodal | Architecture: gru | Input dimension: 791 | Parameters: 79,266
+Epoch 01/50 | Train: 1.332337 (D:0.088337, L:0.8979) | Val: 1.205571 (D:0.088346, L:0.6442) | BEST SAVED
+Epoch 02/50 | Train: 0.768164 (D:0.043377, L:0.6688) | Val: 1.046163 (D:0.080031, L:0.4917) | BEST SAVED
+Epoch 03/50 | Train: 0.528838 (D:0.027110, L:0.5155) | Val: 0.951670 (D:0.074373, L:0.4159) | BEST SAVED
+Epoch 04/50 | Train: 0.392136 (D:0.018302, L:0.4182) | Val: 0.885655 (D:0.069722, L:0.3769) | BEST SAVED
+Epoch 05/50 | Train: 0.319714 (D:0.013183, L:0.3758) | Val: 0.855804 (D:0.067682, L:0.3580) | BEST SAVED
+Epoch 06/50 | Train: 0.260530 (D:0.009730, L:0.3265) | Val: 0.842536 (D:0.067096, L:0.3432) | BEST SAVED
+Epoch 07/50 | Train: 0.223753 (D:0.007545, L:0.2966) | Val: 0.807015 (D:0.063949, L:0.3350) | BEST SAVED
+Epoch 08/50 | Train: 0.191104 (D:0.005629, L:0.2696) | Val: 0.788399 (D:0.062269, L:0.3314) | BEST SAVED
+Epoch 09/50 | Train: 0.169829 (D:0.004586, L:0.2479) | Val: 0.782011 (D:0.061806, L:0.3279) | BEST SAVED
+Epoch 10/50 | Train: 0.149410 (D:0.003551, L:0.2278) | Val: 0.766453 (D:0.060373, L:0.3254) | BEST SAVED
+Epoch 11/50 | Train: 0.132712 (D:0.002878, L:0.2079) | Val: 0.758816 (D:0.059666, L:0.3243) | BEST SAVED
+Epoch 12/50 | Train: 0.118544 (D:0.002289, L:0.1913) | Val: 0.751187 (D:0.058906, L:0.3242) | BEST SAVED
+Epoch 13/50 | Train: 0.107800 (D:0.001889, L:0.1778) | Val: 0.738717 (D:0.057728, L:0.3229) | BEST SAVED
+Epoch 14/50 | Train: 0.097551 (D:0.001532, L:0.1645) | Val: 0.740982 (D:0.057755, L:0.3269) | no imp (1/10)
+Epoch 15/50 | Train: 0.090400 (D:0.001326, L:0.1543) | Val: 0.737416 (D:0.057360, L:0.3276) | BEST SAVED
+Epoch 16/50 | Train: 0.082852 (D:0.001106, L:0.1436) | Val: 0.724575 (D:0.056028, L:0.3286) | BEST SAVED
+Epoch 17/50 | Train: 0.076513 (D:0.000937, L:0.1343) | Val: 0.731835 (D:0.056766, L:0.3283) | no imp (1/10)
+Epoch 18/50 | Train: 0.071008 (D:0.000788, L:0.1263) | Val: 0.721944 (D:0.055830, L:0.3273) | BEST SAVED
+Epoch 19/50 | Train: 0.065746 (D:0.000689, L:0.1177) | Val: 0.720799 (D:0.055550, L:0.3306) | BEST SAVED
+Epoch 20/50 | Train: 0.062512 (D:0.000600, L:0.1130) | Val: 0.715566 (D:0.054979, L:0.3315) | BEST SAVED
+Epoch 21/50 | Train: 0.057701 (D:0.000524, L:0.1049) | Val: 0.708383 (D:0.054329, L:0.3302) | BEST SAVED
+Epoch 22/50 | Train: 0.053759 (D:0.000449, L:0.0985) | Val: 0.709357 (D:0.054340, L:0.3319) | no imp (1/10)
+Epoch 23/50 | Train: 0.051083 (D:0.000420, L:0.0938) | Val: 0.703091 (D:0.053742, L:0.3313) | BEST SAVED
+Epoch 24/50 | Train: 0.048359 (D:0.000382, L:0.0891) | Val: 0.701325 (D:0.053549, L:0.3317) | BEST SAVED
+Epoch 25/50 | Train: 0.045722 (D:0.000333, L:0.0848) | Val: 0.700820 (D:0.053503, L:0.3316) | BEST SAVED
+Epoch 26/50 | Train: 0.043687 (D:0.000315, L:0.0811) | Val: 0.699827 (D:0.053316, L:0.3333) | BEST SAVED
+Epoch 27/50 | Train: 0.041849 (D:0.000283, L:0.0780) | Val: 0.691609 (D:0.052459, L:0.3340) | BEST SAVED
+Epoch 28/50 | Train: 0.039887 (D:0.000257, L:0.0746) | Val: 0.694523 (D:0.052746, L:0.3341) | no imp (1/10)
+Epoch 29/50 | Train: 0.038380 (D:0.000235, L:0.0721) | Val: 0.688451 (D:0.052073, L:0.3354) | BEST SAVED
+Epoch 30/50 | Train: 0.037089 (D:0.000223, L:0.0697) | Val: 0.690028 (D:0.052203, L:0.3360) | no imp (1/10)
+Epoch 31/50 | Train: 0.035815 (D:0.000209, L:0.0675) | Val: 0.686975 (D:0.051907, L:0.3358) | BEST SAVED
+Epoch 32/50 | Train: 0.034701 (D:0.000200, L:0.0654) | Val: 0.691264 (D:0.052295, L:0.3366) | no imp (1/10)
+Epoch 33/50 | Train: 0.033671 (D:0.000190, L:0.0635) | Val: 0.685727 (D:0.051773, L:0.3360) | BEST SAVED
+Epoch 34/50 | Train: 0.032839 (D:0.000180, L:0.0621) | Val: 0.687140 (D:0.051905, L:0.3362) | no imp (1/10)
+Epoch 35/50 | Train: 0.032000 (D:0.000167, L:0.0607) | Val: 0.684214 (D:0.051595, L:0.3365) | BEST SAVED
+Epoch 36/50 | Train: 0.031216 (D:0.000162, L:0.0592) | Val: 0.682458 (D:0.051424, L:0.3364) | BEST SAVED
+Epoch 37/50 | Train: 0.030626 (D:0.000155, L:0.0582) | Val: 0.682945 (D:0.051429, L:0.3373) | no imp (1/10)
+Epoch 38/50 | Train: 0.030020 (D:0.000152, L:0.0570) | Val: 0.681310 (D:0.051301, L:0.3366) | BEST SAVED
+Epoch 39/50 | Train: 0.029443 (D:0.000142, L:0.0560) | Val: 0.681166 (D:0.051271, L:0.3369) | BEST SAVED
+Epoch 40/50 | Train: 0.029103 (D:0.000140, L:0.0554) | Val: 0.682019 (D:0.051336, L:0.3373) | no imp (1/10)
+Epoch 41/50 | Train: 0.028549 (D:0.000137, L:0.0544) | Val: 0.679666 (D:0.051102, L:0.3373) | BEST SAVED
+Epoch 42/50 | Train: 0.028221 (D:0.000131, L:0.0538) | Val: 0.678797 (D:0.051016, L:0.3373) | BEST SAVED
+Epoch 43/50 | Train: 0.027813 (D:0.000128, L:0.0531) | Val: 0.679492 (D:0.051073, L:0.3375) | no imp (1/10)
+Epoch 44/50 | Train: 0.027587 (D:0.000125, L:0.0527) | Val: 0.678536 (D:0.050981, L:0.3375) | BEST SAVED
+Epoch 45/50 | Train: 0.027218 (D:0.000122, L:0.0520) | Val: 0.678194 (D:0.050945, L:0.3375) | BEST SAVED
+Epoch 46/50 | Train: 0.026917 (D:0.000119, L:0.0515) | Val: 0.676670 (D:0.050799, L:0.3374) | BEST SAVED
+Epoch 47/50 | Train: 0.026636 (D:0.000118, L:0.0509) | Val: 0.677380 (D:0.050869, L:0.3374) | no imp (1/10)
+Epoch 48/50 | Train: 0.026433 (D:0.000116, L:0.0506) | Val: 0.676306 (D:0.050761, L:0.3374) | BEST SAVED
+Epoch 49/50 | Train: 0.026804 (D:0.000114, L:0.0513) | Val: 0.675689 (D:0.050695, L:0.3375) | BEST SAVED
+Epoch 50/50 | Train: 0.026131 (D:0.000113, L:0.0500) | Val: 0.675342 (D:0.050669, L:0.3373) | BEST SAVED
+
+Saved history -> outputs/ablation_gru_multimodal_histfc100_loss_history.csv
+Best validation loss: 0.675342 at epoch 50
+
+--- TEST SET EVALUATION (GRU_MULTIMODAL_HISTFC100) ---
+Disease Severity: R2=-2.116231, RMSE=0.247406, MAE=0.197348, MSE=0.061210
+Lesion Area     : R2=0.709040, RMSE=253,908.39, MAE=178,153.53, MSE=64,469,471,232.0
+Saved metrics -> outputs/ablation_gru_multimodal_histfc100_qlstm_metrics.json
+Saved predictions -> outputs/ablation_gru_multimodal_histfc100_predictions.csv
