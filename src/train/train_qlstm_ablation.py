@@ -71,7 +71,44 @@ def set_seed(seed=42):
         torch.cuda.manual_seed_all(seed)
 
 
-def create_ablation_loaders(modality="multimodal", batch_size=8, random_state=42, data_path=DATA_PATH):
+def split_indices(y, leaf_ids, random_state, seasons=None, train_season=None, train_fraction=1.0):
+    """
+    Leaf-level train/val/test indices.
+
+    Default: 70/15/15 % of leaves (two-stage GroupShuffleSplit).
+    train_season: train/val on that season's leaves (85/15), test on every
+        window of the other season(s).
+    train_fraction: keep a random subset of the training leaves; val/test
+        leaves are unchanged, so results stay comparable across fractions.
+    """
+    if train_season is not None:
+        in_season = np.where(seasons == train_season)[0]
+        test_idx = np.where(seasons != train_season)[0]
+        gss = GroupShuffleSplit(n_splits=1, test_size=0.15, random_state=random_state)
+        rel_train, rel_val = next(gss.split(in_season, y[in_season], groups=leaf_ids[in_season]))
+        train_idx, val_idx = in_season[rel_train], in_season[rel_val]
+    else:
+        # Stage 1 split: 70% train / 30% temp
+        gss_1 = GroupShuffleSplit(n_splits=1, test_size=0.30, random_state=random_state)
+        train_idx, temp_idx = next(gss_1.split(y, y, groups=leaf_ids))
+
+        # Stage 2 split: 15% val / 15% test
+        gss_2 = GroupShuffleSplit(n_splits=1, test_size=0.50, random_state=random_state)
+        temp_rel_val, temp_rel_test = next(gss_2.split(temp_idx, y[temp_idx], groups=leaf_ids[temp_idx]))
+        val_idx = temp_idx[temp_rel_val]
+        test_idx = temp_idx[temp_rel_test]
+
+    if train_fraction < 1.0:
+        train_leaves = np.unique(leaf_ids[train_idx])
+        n_keep = max(1, int(round(train_fraction * len(train_leaves))))
+        keep = np.random.default_rng(random_state).choice(train_leaves, n_keep, replace=False)
+        train_idx = train_idx[np.isin(leaf_ids[train_idx], keep)]
+
+    return train_idx, val_idx, test_idx
+
+
+def create_ablation_loaders(modality="multimodal", batch_size=8, random_state=42, data_path=DATA_PATH,
+                            train_season=None, train_fraction=1.0):
     data = np.load(data_path, allow_pickle=True)
     X_full = data["X"]
     y_disease = data["y_placl"]
@@ -100,16 +137,12 @@ def create_ablation_loaders(modality="multimodal", batch_size=8, random_state=42
 
     print(f"[{modality_name}] Input X shape: {X.shape}")
 
-    # Stage 1 split: 70% train / 30% temp
-    gss_1 = GroupShuffleSplit(n_splits=1, test_size=0.30, random_state=random_state)
-    train_idx, temp_idx = next(gss_1.split(X, y_disease, groups=leaf_ids))
-
-    # Stage 2 split: 15% val / 15% test
-    gss_2 = GroupShuffleSplit(n_splits=1, test_size=0.50, random_state=random_state)
-    temp_rel_val, temp_rel_test = next(gss_2.split(temp_idx, y_disease[temp_idx], groups=leaf_ids[temp_idx]))
-
-    val_idx = temp_idx[temp_rel_val]
-    test_idx = temp_idx[temp_rel_test]
+    seasons = data["season"] if train_season is not None else None
+    train_idx, val_idx, test_idx = split_indices(
+        y_disease, leaf_ids, random_state, seasons=seasons, train_season=train_season, train_fraction=train_fraction
+    )
+    print(f"Leaves train/val/test: {len(set(leaf_ids[train_idx]))}/{len(set(leaf_ids[val_idx]))}/{len(set(leaf_ids[test_idx]))} "
+          f"| windows {len(train_idx)}/{len(val_idx)}/{len(test_idx)}")
 
     train_leaves = set(leaf_ids[train_idx])
     val_leaves = set(leaf_ids[val_idx])
@@ -186,10 +219,15 @@ CONFIG = {
 }
 
 
-def train_ablation_model(modality, data_path=DATA_PATH, tag=None, architecture="qlstm", seed=None):
+def train_ablation_model(modality, data_path=DATA_PATH, tag=None, architecture="qlstm", seed=None,
+                         train_season=None, train_fraction=1.0):
     run_name = modality if tag is None else f"{modality}_{tag}"
     if architecture != "qlstm":
         run_name = f"{architecture}_{run_name}"
+    if train_season is not None:
+        run_name = f"{run_name}_train{train_season}"
+    if train_fraction < 1.0:
+        run_name = f"{run_name}_frac{train_fraction:g}"
     # An explicit seed controls both the leaf split and weight initialisation.
     if seed is not None:
         run_name = f"{run_name}_seed{seed}"
@@ -212,7 +250,8 @@ def train_ablation_model(modality, data_path=DATA_PATH, tag=None, architecture="
         lesion_std,
         input_dim,
         test_leaf_ids,
-    ) = create_ablation_loaders(modality=modality, batch_size=CONFIG["batch_size"], random_state=seed, data_path=data_path)
+    ) = create_ablation_loaders(modality=modality, batch_size=CONFIG["batch_size"], random_state=seed, data_path=data_path,
+                              train_season=train_season, train_fraction=train_fraction)
 
     model = build_model(architecture, input_dim, CONFIG["hidden_size"], CONFIG["mlp_heads"]).to(device)
 
@@ -447,6 +486,8 @@ if __name__ == "__main__":
                         help="multimodal = all features of the dataset; metadata/vit slice the fused history100 layout; all = the three modalities on history100")
     parser.add_argument("--architecture", type=str, choices=["qlstm", "lstm", "gru"], default="qlstm", help="Recurrent architecture to train")
     parser.add_argument("--seed", type=int, default=None, help="Seed for the leaf split and initialisation (appended to output names)")
+    parser.add_argument("--train_season", type=int, default=None, help="Train on this season's leaves, test on the other season (rds only)")
+    parser.add_argument("--train_fraction", type=float, default=1.0, help="Fraction of training leaves to keep (val/test unchanged)")
     args = parser.parse_args()
 
     if args.modality == "clean_metadata":
@@ -455,4 +496,5 @@ if __name__ == "__main__":
         for m in ["metadata", "vit", "multimodal"]:
             train_ablation_model(m, data_path=DATASETS["history100"], tag="history100", architecture=args.architecture, seed=args.seed)
     else:
-        train_ablation_model(args.modality, data_path=DATASETS[args.dataset], tag=args.dataset, architecture=args.architecture, seed=args.seed)
+        train_ablation_model(args.modality, data_path=DATASETS[args.dataset], tag=args.dataset, architecture=args.architecture, seed=args.seed,
+                             train_season=args.train_season, train_fraction=args.train_fraction)
